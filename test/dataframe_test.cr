@@ -24,6 +24,15 @@ class DataframeTest < Minitest::Test
     assert_equal ["Jim","Male","American"], dataframe.rows[0]
   end
 
+  def test_outputs_to_csv
+    filename = "./test/files/adults.csv"
+    file = File.read(filename)
+
+    dataframe = Dataframe.from_csv_file(filename)
+
+    assert_equal file, dataframe.to_csv
+  end
+
   def test_joins_dataframes_on_specified_columns
     kids = Dataframe.from_csv_file("./test/files/kids.csv")
     school = Dataframe.from_csv_file("./test/files/school.csv")

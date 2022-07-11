@@ -22,6 +22,11 @@ class Dataframe
     Dataframe.new(headers, rows)
   end
 
+  def to_csv
+    output = @headers.join(",") + "\n"
+    return output + @rows.map { |row| row.join(",") + "\n" }.join
+  end
+
   def inner_join(other : Dataframe, on : Array(String)) : Dataframe
     new_headers = (@headers + other.headers).uniq
     new_rows = Array(Array(String)).new
