@@ -33,13 +33,48 @@ class DataframeTest < Minitest::Test
     assert_equal file, dataframe.to_csv
   end
 
-  def test_joins_dataframes_on_specified_columns
+  def test_inner_joins_dataframes_on_specified_columns
     kids = Dataframe.from_csv_file("./test/files/kids.csv")
     school = Dataframe.from_csv_file("./test/files/school.csv")
 
     joined = kids.inner_join(school, on: ["Name", "Age"])
 
+    assert_equal 3, joined.rows.size
     assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
     assert_equal ["Eddie", "20", "Male", "12"], joined.rows[0]
+  end
+
+  def test_left_outer_join_dataframes
+    kids = Dataframe.from_csv_file("./test/files/kids.csv")
+    school = Dataframe.from_csv_file("./test/files/school.csv")
+
+    joined = kids.left_outer_join(school, on: ["Name", "Age"])
+
+    assert_equal 4, joined.rows.size
+    assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
+    assert_equal ["El", "15", "Female", ""], joined.rows[2]
+  end
+
+  def test_right_outer_joins_dataframes
+    kids = Dataframe.from_csv_file("./test/files/kids.csv")
+    school = Dataframe.from_csv_file("./test/files/school.csv")
+
+    joined = kids.right_outer_join(school, on: ["Name", "Age"])
+
+    assert_equal 4, joined.rows.size
+    assert_equal ["Name", "Age", "Grade", "Gender"], joined.headers
+    assert_equal ["Gareth", "17", "11", ""], joined.rows.last
+  end
+
+  def test_full_join
+    kids = Dataframe.from_csv_file("./test/files/kids.csv")
+    school = Dataframe.from_csv_file("./test/files/school.csv")
+
+    joined = kids.full_join(school, on: ["Name", "Age"])
+
+    assert_equal 5, joined.rows.size
+    assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
+    assert_equal ["Eddie", "20", "Male", "12"], joined.rows[0]
+    assert_equal ["Gareth", "17", "", "11"], joined.rows.last
   end
 end

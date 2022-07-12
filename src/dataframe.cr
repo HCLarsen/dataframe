@@ -48,6 +48,61 @@ class Dataframe
     Dataframe.new(new_headers, new_rows)
   end
 
+  def left_outer_join(other : Dataframe, on : Array(String)) : Dataframe
+    new_headers = (@headers + other.headers).uniq
+    new_rows = Array(Array(String)).new
+
+    indexed = indexed_by(on)
+    indexed_other = other.indexed_by(on)
+
+    indexed.each do |index, row|
+      new_row = Array(String).new(new_headers.size, "")
+      new_hash = Hash.zip(new_headers, new_row)
+
+      new_hash.merge!(Hash.zip(@headers, row))
+      if match = indexed_other[index]?
+        new_hash.merge!(Hash.zip(other.headers, match))
+      end
+      new_rows << new_hash.values
+    end
+
+    Dataframe.new(new_headers, new_rows)
+  end
+
+  def right_outer_join(other : Dataframe, on : Array(String)) : Dataframe
+    other.left_outer_join(self, on: on)
+  end
+
+  def full_join(other : Dataframe, on : Array(String)) : Dataframe
+    new_headers = (@headers + other.headers).uniq
+    new_rows = Array(Array(String)).new
+
+    indexed = indexed_by(on)
+    indexed_other = other.indexed_by(on)
+
+    indexed.each do |index, row|
+      new_row = Array(String).new(new_headers.size, "")
+      new_hash = Hash.zip(new_headers, new_row)
+
+      new_hash.merge!(Hash.zip(@headers, row))
+      if match = indexed_other[index]?
+        new_hash.merge!(Hash.zip(other.headers, match))
+        indexed_other.delete(index)
+      end
+      new_rows << new_hash.values
+    end
+
+    indexed_other.each do |index, row|
+      new_row = Array(String).new(new_headers.size, "")
+      new_hash = Hash.zip(new_headers, new_row)
+      new_hash.merge!(Hash.zip(other.headers, row))
+
+      new_rows << new_hash.values
+    end
+
+    Dataframe.new(new_headers, new_rows)
+  end
+
   def indexed_by(headers) : Hash(String, Array(String))
     indexes = headers.map { |header| @headers.index(header) }.compact
 
