@@ -4,11 +4,11 @@ require "/../src/dataframe"
 
 class DataframeTest < Minitest::Test
   def test_initializes
-    headers = ["Name", "Age", "Nationality"]
+    headers = ["Name", "Age", "Address"]
     rows = [
-      ["Jim", "29", "American"],
-      ["Yuri", "35", "Russian"],
-      ["Murray", "40", "American"]
+      ["Jim", "41", "Hawkins, Indiana, USA"],
+      ["Yuri", "47", "Siberia, USSR"],
+      ["Murray", "40", "Sesser, Illinois, USA"]
     ]
 
     dataframe = Dataframe.new(headers, rows)
@@ -20,8 +20,8 @@ class DataframeTest < Minitest::Test
   def test_parses_from_csv
     dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
 
-    assert_equal ["Name", "Gender", "Nationality"], dataframe.headers
-    assert_equal ["Jim","Male","American"], dataframe.rows[0]
+    assert_equal ["Name", "Age", "Address"], dataframe.headers
+    assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.rows[0]
   end
 
   def test_outputs_to_csv

@@ -23,8 +23,8 @@ class Dataframe
   end
 
   def to_csv
-    output = @headers.join(",") + "\n"
-    return output + @rows.map { |row| row.join(",") + "\n" }.join
+    output = @headers.map{ |e| %("#{e}") }.join(",") + "\n"
+    return output + @rows.map { |row| row.map{ |e| %("#{e}") }.join(",") + "\n" }.join
   end
 
   def inner_join(other : Dataframe, on : Array(String)) : Dataframe

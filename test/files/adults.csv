@@ -1,4 +1,4 @@
-Name,Gender,Nationality
-Jim,Male,American
-Yuri,Male,Russian
-Murray,Male,American
+"Name","Age","Address"
+"Jim","41","Hawkins, Indiana, USA"
+"Yuri","47","Siberia, USSR"
+"Murray","40","Sesser, Illinois, USA"
