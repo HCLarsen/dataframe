@@ -27,6 +27,16 @@ class Dataframe
     return output + @rows.map { |row| row.map{ |e| %("#{e}") }.join(",") + "\n" }.join
   end
 
+  def columns : Hash(String, Array(String))
+    columns = Hash(String, Array(String)).new
+
+    @rows.transpose.each_with_index do |column, index|
+      columns[@headers[index]] = column
+    end
+
+    columns
+  end
+
   def inner_join(other : Dataframe, on : Array(String)) : Dataframe
     new_headers = (@headers + other.headers).uniq
     new_rows = Array(Array(String)).new
@@ -115,5 +125,16 @@ class Dataframe
     end
 
     hash
+  end
+
+  def modify_column(header : String, & : String ->)
+    new_columns = columns
+
+    new_column = new_columns[header].map do |element|
+      yield element
+    end
+
+    new_columns[header] = new_column
+    @rows = new_columns.values.transpose
   end
 end

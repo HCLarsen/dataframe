@@ -33,6 +33,12 @@ class DataframeTest < Minitest::Test
     assert_equal file, dataframe.to_csv
   end
 
+  def test_gets_columns
+    dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
+
+    assert_equal ["Jim", "Yuri", "Murray"], dataframe.columns["Name"]
+  end
+
   def test_inner_joins_dataframes_on_specified_columns
     kids = Dataframe.from_csv_file("./test/files/kids.csv")
     school = Dataframe.from_csv_file("./test/files/school.csv")
@@ -76,5 +82,19 @@ class DataframeTest < Minitest::Test
     assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
     assert_equal ["Eddie", "20", "Male", "12"], joined.rows[0]
     assert_equal ["Gareth", "17", "", "11"], joined.rows.last
+  end
+
+  def test_modify_column
+    dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
+
+    dataframe.modify_column("Address") do |e|
+      e.upcase
+    end
+
+    dataframe.modify_column("Name") do |e|
+      e.downcase
+    end
+
+    assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.rows[0]
   end
 end
