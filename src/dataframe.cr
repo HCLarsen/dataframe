@@ -113,7 +113,7 @@ class Dataframe
     Dataframe.new(new_headers, new_rows)
   end
 
-  def indexed_by(headers) : Hash(String, Array(String))
+  def indexed_by(headers : Array(String)) : Hash(String, Array(String))
     indexes = headers.map { |header| @headers.index(header) }.compact
 
     hash = Hash(String, Array(String)).new
@@ -136,5 +136,23 @@ class Dataframe
 
     new_columns[header] = new_column
     @rows = new_columns.values.transpose
+  end
+
+  def remove_duplicates(headers : Array(String))
+    header_indexes = headers.map { |header| @headers.index(header) }.compact
+
+    indexes = [] of String
+    new_rows = Array(Array(String)).new
+
+    @rows.each do |row|
+      values = header_indexes.map { |i| row[i] }
+      index = values.join
+      unless indexes.includes?(index)
+        indexes << index
+        new_rows << row
+      end
+    end
+
+    @rows = new_rows
   end
 end

@@ -97,4 +97,26 @@ class DataframeTest < Minitest::Test
 
     assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.rows[0]
   end
+
+  def test_remove_duplicates
+    headers = ["Name", "Age", "Address"]
+    rows = [
+      ["Jim", "41", "Hawkins, Indiana, USA"],
+      ["Eddie", "20", "Hawkins, Indiana, USA"],
+      ["Jim", "41", "Siberia, USSR"],
+      ["Yuri", "47", "Siberia, USSR"]
+    ]
+
+    dataframe = Dataframe.new(headers, rows)
+
+    dataframe.remove_duplicates(["Name"])
+
+    expected = [
+      ["Jim", "41", "Hawkins, Indiana, USA"],
+      ["Eddie", "20", "Hawkins, Indiana, USA"],
+      ["Yuri", "47", "Siberia, USSR"]
+    ]
+
+    assert_equal expected, dataframe.rows
+  end
 end
