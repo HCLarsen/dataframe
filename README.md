@@ -24,7 +24,9 @@ TODO: Write usage instructions here
 
 ## Development
 
-TODO: Write development instructions here
+### To Do
+
+1. Add listing/extraction of all non-unique rows.
 
 ## Contributing
 
