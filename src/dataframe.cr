@@ -155,4 +155,38 @@ class Dataframe
 
     @rows = new_rows
   end
+
+  def duplicates(headers : Array(String), remove = false) : Dataframe
+    header_indexes = headers.map { |header| @headers.index(header) }.compact
+
+    hash = Hash(String, Array(String)).new
+    indexes = Hash(String, Int32).new(0)
+    duplicate_rows = Array(Array(String)).new
+    new_rows = Array(Array(String)).new
+
+    @rows.each do |row|
+      values = header_indexes.map { |i| row[i] }
+      indexes[values.join] += 1
+    end
+
+    indexes.select! { |k, v| v > 1 }
+    set = Set.new(indexes.keys)
+
+    @rows.each do |row|
+      values = header_indexes.map { |i| row[i] }
+      index = values.join
+
+      if set.includes?(index)
+        duplicate_rows << row
+      elsif remove
+        new_rows << row
+      end
+    end
+
+    if remove
+      @rows = new_rows
+    end
+
+    Dataframe.new(self.headers, duplicate_rows)
+  end
 end

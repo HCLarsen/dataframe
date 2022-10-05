@@ -26,7 +26,9 @@ TODO: Write usage instructions here
 
 ### To Do
 
-1. Add listing/extraction of all non-unique rows.
+1. Add filtering by column.
+2. Add filtering of rows.
+3. Add detection of "mergeable" rows.
 
 ## Contributing
 
