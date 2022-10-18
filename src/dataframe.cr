@@ -3,12 +3,24 @@ require "csv"
 class Dataframe
   VERSION = "0.1.0"
 
+  class InvalidDataframe < Exception
+  end
+
   getter headers : Array(String)
   getter rows : Array(Array(String))
 
+  # Creates a new `Dataframe` instance with the given headers and rows.
+  #
+  # Raises an InvalidDataframe error if the headers and each row don't all have
+  # the same length.
   def initialize(@headers, @rows)
   end
 
+  # Creates a new `Dataframe` instance from the data of a CSV file, treating
+  # the first row as the header row.
+  #
+  # Raises an InvalidDataframe error if all lines of the CSV aren't the same
+  # length
   def self.from_csv_file(filename : String) : Dataframe
     file = File.read(filename)
 
@@ -22,11 +34,14 @@ class Dataframe
     Dataframe.new(headers, rows)
   end
 
+  # Outputs the `Dataframe` instance as a string in CSV format.
   def to_csv
     output = @headers.map{ |e| %("#{e}") }.join(",") + "\n"
     return output + @rows.map { |row| row.map{ |e| %("#{e}") }.join(",") + "\n" }.join
   end
 
+  # Returns a `Hash` where the keys are the headers of the `Dataframe` instance,
+  # and the values are arrays of the corresponding column.
   def columns : Hash(String, Array(String))
     columns = Hash(String, Array(String)).new
 
@@ -37,6 +52,8 @@ class Dataframe
     columns
   end
 
+  # Returns a new `Dataframe` that is the result of an inner join of the
+  # receiver and *other*, using the headers in *on* to match rows.
   def inner_join(other : Dataframe, on : Array(String)) : Dataframe
     new_headers = (@headers + other.headers).uniq
     new_rows = Array(Array(String)).new
@@ -58,6 +75,8 @@ class Dataframe
     Dataframe.new(new_headers, new_rows)
   end
 
+  # Returns a new `Dataframe` that is the result of a left outer join of the
+  # receiver and *other*, using the headers in *on* to match rows.
   def left_outer_join(other : Dataframe, on : Array(String)) : Dataframe
     new_headers = (@headers + other.headers).uniq
     new_rows = Array(Array(String)).new
@@ -79,10 +98,14 @@ class Dataframe
     Dataframe.new(new_headers, new_rows)
   end
 
+  # Returns a new `Dataframe` that is the result of a right outer join of the
+  # receiver and *other*, using the headers in *on* to match rows.
   def right_outer_join(other : Dataframe, on : Array(String)) : Dataframe
     other.left_outer_join(self, on: on)
   end
 
+  # Returns a new `Dataframe` that is the result of a full join of the
+  # receiver and *other*, using the headers in *on* to match rows.
   def full_join(other : Dataframe, on : Array(String)) : Dataframe
     new_headers = (@headers + other.headers).uniq
     new_rows = Array(Array(String)).new
@@ -127,6 +150,8 @@ class Dataframe
     hash
   end
 
+  # Iterates through all elements in the column specified by *header*, running
+  # the provided block on each element.
   def modify_column(header : String, & : String ->)
     new_columns = columns
 
@@ -138,6 +163,8 @@ class Dataframe
     @rows = new_columns.values.transpose
   end
 
+  # Removes all rows for which a previous row is identical in the columns
+  # specified by *headers*.
   def remove_duplicates(headers : Array(String))
     header_indexes = headers.map { |header| @headers.index(header) }.compact
 
@@ -156,6 +183,24 @@ class Dataframe
     @rows = new_rows
   end
 
+  # Returns a new dataframe with all duplicate rows from the reciever, based
+  # on the headers specified.
+  #
+  # Passing in `true` as the second argument modifies `self` by removing the
+  # same duplicate rows.
+  #
+  # This method differs from `#remove_duplicates` in that it removes all rows
+  # that have duplicates in the dataframe, including the first.
+  #
+  # ```
+  # dataframe.rows  #=> [["Jim", "41", "Hawkins, Indiana, USA"],["Eddie", "20", "Hawkins, Indiana, USA"],["Jim", "41", "Siberia, USSR"],["Yuri", "47", "Siberia, USSR"]]
+  #
+  # duplicates = dataframe.duplicates(["Name"], true)
+  #
+  # duplicates.rows #=> [["Jim", "44", "Hawkins, Indiana, USA"],["Jim", "44", "Siberia, USSR"]]
+  # dataframe.rows  #=> [["Eddie", "20", "Hawkins, Indiana, USA"],["Yuri", "47", "Siberia, USSR"]]
+  # ```
+  #
   def duplicates(headers : Array(String), remove = false) : Dataframe
     header_indexes = headers.map { |header| @headers.index(header) }.compact
 
