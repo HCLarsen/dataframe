@@ -104,7 +104,8 @@ class DataframeTest < Minitest::Test
       ["Jim", "41", "Hawkins, Indiana, USA"],
       ["Eddie", "20", "Hawkins, Indiana, USA"],
       ["Jim", "41", "Siberia, USSR"],
-      ["Yuri", "47", "Siberia, USSR"]
+      ["Yuri", "47", "Siberia, USSR"],
+      ["Jim", "41", "Siberia, USSR"]
     ]
 
     dataframe = Dataframe.new(headers, rows)
@@ -120,6 +121,23 @@ class DataframeTest < Minitest::Test
     assert_equal expected, dataframe.rows
   end
 
+  def test_remove_duplicates_without_args
+    dataframe = Dataframe.from_csv_file("./test/files/duplicates.csv")
+
+    dataframe.remove_duplicates
+
+    expected = [
+      ["Jim", "44", "Hawkins, Indiana, USA"],
+      ["Joyce", "44", "Hawkins, Indiana, USA"],
+      ["Eddie","20","Hawkins, Indiana, USA"],
+      ["Jim", "44", "Siberia, USSR"],
+      ["Yuri","47","Siberia, USSR"],
+      ["Joyce", "44", "Lenora Hills, California, USA"],
+    ]
+
+    assert_equal expected, dataframe.rows
+  end
+
   def test_get_duplicates
     dataframe = Dataframe.from_csv_file("./test/files/duplicates.csv")
 
@@ -130,6 +148,7 @@ class DataframeTest < Minitest::Test
       ["Joyce", "44", "Hawkins, Indiana, USA"],
       ["Jim", "44", "Siberia, USSR"],
       ["Joyce", "44", "Lenora Hills, California, USA"],
+      ["Jim", "44", "Hawkins, Indiana, USA"],
     ]
 
     assert_equal expected, duplicates.rows
@@ -150,6 +169,7 @@ class DataframeTest < Minitest::Test
       ["Joyce", "44", "Hawkins, Indiana, USA"],
       ["Jim", "44", "Siberia, USSR"],
       ["Joyce", "44", "Lenora Hills, California, USA"],
+      ["Jim", "44", "Hawkins, Indiana, USA"],
     ]
 
     assert_equal expected, dataframe.rows

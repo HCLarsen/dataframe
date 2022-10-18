@@ -137,12 +137,12 @@ class Dataframe
   end
 
   def indexed_by(headers : Array(String)) : Hash(String, Array(String))
-    indexes = headers.map { |header| @headers.index(header) }.compact
+    header_indexes = header_indexes(headers)
 
     hash = Hash(String, Array(String)).new
 
     @rows.each do |row|
-      values = indexes.map { |i| row[i] }
+      values = header_indexes.map { |i| row[i] }
       index = values.join
       hash[index] = row
     end
@@ -165,19 +165,26 @@ class Dataframe
 
   # Removes all rows for which a previous row is identical in the columns
   # specified by *headers*.
-  def remove_duplicates(headers : Array(String))
-    header_indexes = headers.map { |header| @headers.index(header) }.compact
-
-    indexes = [] of String
+  #
+  # If *headers* is left blank, it calculates duplicates based on all columns
+  def remove_duplicates(headers = [] of String)
     new_rows = Array(Array(String)).new
 
-    @rows.each do |row|
-      values = header_indexes.map { |i| row[i] }
-      index = values.join
-      unless indexes.includes?(index)
-        indexes << index
-        new_rows << row
+    if headers.size > 0
+      header_indexes = header_indexes(headers)
+
+      indexes = [] of String
+
+      @rows.each do |row|
+        values = header_indexes.map { |i| row[i] }
+        index = values.join
+        unless indexes.includes?(index)
+          indexes << index
+          new_rows << row
+        end
       end
+    else
+      new_rows = @rows.uniq
     end
 
     @rows = new_rows
@@ -192,6 +199,8 @@ class Dataframe
   # This method differs from `#remove_duplicates` in that it removes all rows
   # that have duplicates in the dataframe, including the first.
   #
+  # If *headers* is left blank, it calculates duplicates based on all columns
+  #
   # ```
   # dataframe.rows  #=> [["Jim", "41", "Hawkins, Indiana, USA"],["Eddie", "20", "Hawkins, Indiana, USA"],["Jim", "41", "Siberia, USSR"],["Yuri", "47", "Siberia, USSR"]]
   #
@@ -201,8 +210,8 @@ class Dataframe
   # dataframe.rows  #=> [["Eddie", "20", "Hawkins, Indiana, USA"],["Yuri", "47", "Siberia, USSR"]]
   # ```
   #
-  def duplicates(headers : Array(String), remove = false) : Dataframe
-    header_indexes = headers.map { |header| @headers.index(header) }.compact
+  def duplicates(headers = @headers, remove = false) : Dataframe
+    header_indexes = header_indexes(headers)
 
     hash = Hash(String, Array(String)).new
     indexes = Hash(String, Int32).new(0)
@@ -233,5 +242,9 @@ class Dataframe
     end
 
     Dataframe.new(self.headers, duplicate_rows)
+  end
+
+  private def header_indexes(headers : Array(String)) : Array(Int32)
+    headers.map { |header| @headers.index(header) }.compact
   end
 end
