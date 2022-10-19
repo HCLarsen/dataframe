@@ -18,10 +18,24 @@ class DataframeTest < Minitest::Test
   end
 
   def test_parses_from_csv
+    csv = File.read("./test/files/adults.csv")
+    dataframe = Dataframe.from_csv(csv)
+
+    assert_equal ["Name", "Age", "Address"], dataframe.headers
+    assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.rows[0]
+  end
+
+  def test_parses_from_csv_file
     dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
 
     assert_equal ["Name", "Age", "Address"], dataframe.headers
     assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.rows[0]
+  end
+
+  def test_raises_for_invalid_csv
+    assert_raises do
+      dataframe = Dataframe.from_csv_file("./test/files/uneven.csv")
+    end
   end
 
   def test_gets_row_count

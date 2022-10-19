@@ -3,7 +3,11 @@ require "csv"
 class Dataframe
   VERSION = "0.1.0"
 
-  class InvalidDataframe < Exception
+  # Raised when an error is encountered during parsing.
+  class InvalidDataframeError < Exception
+    def initialize(message = "CSV rows are of uneven length")
+      super(message)
+    end
   end
 
   getter headers : Array(String)
@@ -16,22 +20,34 @@ class Dataframe
   def initialize(@headers, @rows)
   end
 
-  # Creates a new `Dataframe` instance from the data of a CSV file, treating
-  # the first row as the header row.
+  # Creates a new `Dataframe` instance from a CSV string, treating the first
+  # row as the header row.
   #
-  # Raises an InvalidDataframe error if all lines of the CSV aren't the same
+  # Raises an InvalidDataframeError if all lines of the CSV aren't the same
   # length
-  def self.from_csv_file(filename : String) : Dataframe
-    file = File.read(filename)
-
+  def self.from_csv(csv : String) : Dataframe
     rows = Array(Array(String)).new
-    CSV.each_row(file) do |row|
-      rows << row.map { |e| e.strip  }
+    CSV.each_row(csv) do |row|
+      if rows.last? && row.size != rows.last.size
+        raise InvalidDataframeError.new
+      end
+      rows << row.map &.strip
     end
 
     headers = rows.shift
 
     Dataframe.new(headers, rows)
+  end
+
+  # Creates a new `Dataframe` instance from a CSV file, treating the first
+  # row as the header row.
+  #
+  # Raises an InvalidDataframeError if all lines of the CSV aren't the same
+  # length
+  def self.from_csv_file(filename : String) : Dataframe
+    file = File.read(filename)
+
+    self.from_csv(file)
   end
 
   # Returns a `Hash` where the keys are the headers of the `Dataframe` instance,
