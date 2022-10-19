@@ -33,9 +33,11 @@ class DataframeTest < Minitest::Test
   end
 
   def test_raises_for_invalid_csv
-    assert_raises do
+    error = assert_raises do
       dataframe = Dataframe.from_csv_file("./test/files/uneven.csv")
     end
+
+    assert_equal Dataframe::InvalidDataframeError, error.class
   end
 
   def test_gets_row_count
