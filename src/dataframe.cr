@@ -26,7 +26,7 @@ class Dataframe
 
     rows = Array(Array(String)).new
     CSV.each_row(file) do |row|
-      rows << row
+      rows << row.map { |e| e.strip  }
     end
 
     headers = rows.shift
