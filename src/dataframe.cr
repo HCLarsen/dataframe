@@ -34,6 +34,10 @@ class Dataframe
     Dataframe.new(headers, rows)
   end
 
+  def row_count
+    @rows.size
+  end
+
   # Outputs the `Dataframe` instance as a string in CSV format.
   def to_csv
     output = @headers.map{ |e| %("#{e}") }.join(",") + "\n"

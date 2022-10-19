@@ -24,6 +24,11 @@ class DataframeTest < Minitest::Test
     assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.rows[0]
   end
 
+  def test_gets_row_count
+    dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
+    assert_equal 3, dataframe.row_count
+  end
+
   def test_outputs_to_csv
     filename = "./test/files/adults.csv"
     file = File.read(filename)

@@ -28,10 +28,9 @@ TODO: Write usage instructions here
 
 ### To Do
 
-1. Strip leading and trailing whitespace upon creation.
-2. Add filtering by column.
-3. Add filtering of rows.
-4. Add detection of "mergeable" rows.
+1. Add filtering by column.
+2. Add filtering of rows.
+3. Add detection of "mergeable" rows.
 
 ## Contributing
 
