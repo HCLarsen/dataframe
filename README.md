@@ -28,8 +28,8 @@ TODO: Write usage instructions here
 
 ### To Do
 
-1. Add filtering by column.
-2. Add filtering of rows.
+1. Delegate select and select! for rows.
+2. Delete sort and sort! for rows.
 3. Add detection of "mergeable" rows.
 
 ## Contributing

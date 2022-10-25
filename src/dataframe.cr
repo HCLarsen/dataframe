@@ -221,6 +221,15 @@ class Dataframe
     @rows = new_columns.values.transpose
   end
 
+  # Return a new `Dataframe` without the specified columns.
+  def remove_columns(headers : Array(String)) : Dataframe
+    new_columns = columns.reject(headers)
+
+    new_rows = new_columns.values.transpose
+
+    Dataframe.new(headers, new_rows)
+  end
+
   # Removes all rows for which a previous row is identical in the columns
   # specified by *headers*.
   #
@@ -248,6 +257,15 @@ class Dataframe
     @rows = new_rows
   end
 
+  # Changes the header of the specified column to a new value.
+  #
+  # Makes no changes if *old_header* isn't a header.
+  def rename_column(old_header, new_header)
+    if index = @headers.index(old_header)
+      @headers[index] = new_header
+    end
+  end
+
   # Returns a new `Dataframe` that is the result of a right outer join of the
   # receiver and *other*, using the headers in *on* to match rows.
   def right_outer_join(other : Dataframe, on : Array(String)) : Dataframe
@@ -257,6 +275,15 @@ class Dataframe
   # Returns the number of rows in the `Dataframe`.
   def row_count
     @rows.size
+  end
+
+  # Return a new `Dataframe` with only the specified columns.
+  def select_columns(headers : Array(String)) : Dataframe
+    new_columns = columns.select(headers)
+
+    new_rows = new_columns.values.transpose
+
+    Dataframe.new(headers, new_rows)
   end
 
   # Outputs the `Dataframe` instance as a string in CSV format.

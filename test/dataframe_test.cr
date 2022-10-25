@@ -196,4 +196,32 @@ class DataframeTest < Minitest::Test
     assert_equal expected, dataframe.rows
     assert_equal expected_duplicates, duplicates.rows
   end
+
+  def test_selects_columns
+    dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
+    new_headers = ["Name", "Address"]
+
+    ageless = dataframe.select_columns(new_headers)
+
+    assert_equal new_headers, ageless.headers
+    assert_equal ["Jim","Hawkins, Indiana, USA"], ageless.rows[0]
+  end
+
+  def test_removes_columns
+    dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
+    new_headers = ["Age", "Address"]
+
+    names = dataframe.remove_columns(new_headers)
+
+    assert_equal new_headers, names.headers
+    assert_equal ["Jim"], names.rows[0]
+  end
+
+  def test_renames_column
+    dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
+
+    dataframe.rename_column("Address", "Location")
+
+    assert_equal ["Name", "Age", "Location"], dataframe.headers
+  end
 end
