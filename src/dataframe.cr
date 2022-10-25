@@ -292,6 +292,34 @@ class Dataframe
     return output + @rows.map { |row| row.map{ |e| %("#{e}") }.join(",") + "\n" }.join
   end
 
+  # Outputs the `Dataframe` instance in an easy to read table format.
+  def to_table(range = (0..-1)) : String
+    headers_and_rows = [@headers] + @rows
+
+    column_widths = headers_and_rows.transpose.map do |column|
+      column.max_of &.size
+    end
+
+    table = @headers.map_with_index { |e, i| pad_cell(e, column_widths[i]) }.join("  ")
+
+    @rows[range].each do |row|
+      line = row.map_with_index { |e, i| pad_cell(e, column_widths[i]) }.join("  ")
+      table += "\n" + line
+    end
+
+    table
+  end
+
+  private def pad_cell(value : String, length) : String
+    string_length = value.size
+    difference = length - string_length
+    difference = 0 if difference < 0
+
+    padding = " " * difference
+
+    return value + padding
+  end
+
   private def header_indexes(headers : Array(String)) : Array(Int32)
     headers.map { |header| @headers.index(header) }.compact
   end

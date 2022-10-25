@@ -224,4 +224,16 @@ class DataframeTest < Minitest::Test
 
     assert_equal ["Name", "Age", "Location"], dataframe.headers
   end
+
+  def test_outputs_table_string
+    dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
+
+    expected = "Name    Age  Address              \nJim     41   Hawkins, Indiana, USA\nYuri    47   Siberia, USSR        \nMurray  40   Sesser, Illinois, USA"
+
+    assert_equal expected, dataframe.to_table
+
+    expected = "Name    Age  Address              \nJim     41   Hawkins, Indiana, USA\nYuri    47   Siberia, USSR        "
+
+    assert_equal expected, dataframe.to_table(0..1)
+  end
 end
