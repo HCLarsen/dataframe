@@ -251,4 +251,34 @@ class DataframeTest < Minitest::Test
 
     assert_equal expected, dataframe.to_table(0..1)
   end
+
+  def test_iterates
+    dataframe = Dataframe.from_csv_file("./test/files/kids.csv")
+
+    kids_names = ""
+
+    dataframe.each do |row|
+      kids_names += "#{row[0]} "
+    end
+
+    assert_equal "Eddie Mike El Dustin ", kids_names
+  end
+
+  def test_filters_with_select
+    dataframe = Dataframe.from_csv_file("./test/files/school.csv")
+
+    hawkins = dataframe.select_rows { |e| e[2] == "9" }
+
+    assert_equal ["Mike","15","9"], hawkins.rows[0]
+    assert_equal ["Dustin","15","9"], hawkins.rows[1]
+  end
+
+  def test_filters_in_place_with_select
+    dataframe = Dataframe.from_csv_file("./test/files/school.csv")
+
+    dataframe.select_rows! { |e| e[2] == "9" }
+
+    assert_equal ["Mike","15","9"], dataframe.rows[0]
+    assert_equal ["Dustin","15","9"], dataframe.rows[1]
+  end
 end

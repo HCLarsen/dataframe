@@ -122,6 +122,12 @@ class Dataframe
     Dataframe.new(self.headers, duplicate_rows)
   end
 
+  def each(& : Array(String) ->) : Nil
+    @rows.each do |row|
+      yield row
+    end
+  end
+
   # Returns a new `Dataframe` that is the result of a full join of the
   # receiver and *other*, using the headers in *on* to match rows.
   def full_join(other : Dataframe, on : Array(String)) : Dataframe
@@ -281,6 +287,16 @@ class Dataframe
   # Returns the number of rows in the `Dataframe`.
   def row_count
     @rows.size
+  end
+
+  def select_rows(& : Array(String) ->) : Dataframe
+    new_rows = @rows.select { |e| yield e }
+
+    Dataframe.new(@headers, new_rows)
+  end
+
+  def select_rows!(& : Array(String) ->) : Nil
+    @rows.select! { |e| yield e }
   end
 
   # Return a new `Dataframe` with only the specified columns.
