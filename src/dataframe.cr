@@ -18,6 +18,15 @@ class Dataframe
   # Raises an InvalidDataframe error if the headers and each row don't all have
   # the same length.
   def initialize(@headers, @rows)
+    width = @headers.size
+
+    @rows.each do |row|
+      if row.size == width
+        width == row.size
+      else
+        raise InvalidDataframeError.new
+      end
+    end
   end
 
   # Creates a new `Dataframe` instance from a CSV string, treating the first
@@ -28,10 +37,7 @@ class Dataframe
   def self.from_csv(csv : String) : Dataframe
     rows = Array(Array(String)).new
     CSV.each_row(csv) do |row|
-      if rows.last? && row.size != rows.last.size
-        raise InvalidDataframeError.new
-      end
-      rows << row.map &.strip
+      rows << row.map { |e| e.strip  }
     end
 
     headers = rows.shift
@@ -227,7 +233,7 @@ class Dataframe
 
     new_rows = new_columns.values.transpose
 
-    Dataframe.new(headers, new_rows)
+    Dataframe.new(new_columns.keys, new_rows)
   end
 
   # Removes all rows for which a previous row is identical in the columns

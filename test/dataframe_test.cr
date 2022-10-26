@@ -17,6 +17,21 @@ class DataframeTest < Minitest::Test
     assert_equal rows, dataframe.rows
   end
 
+  def test_raises_for_uneven_rows
+    headers = ["Name", "Age", "Address"]
+    rows = [
+      ["Jim", "41", "Hawkins, Indiana, USA"],
+      ["Yuri", "47", "Siberia, USSR"],
+      ["Murray", "40"]
+    ]
+
+    error = assert_raises do
+      dataframe = Dataframe.new(headers, rows)
+    end
+
+    assert_equal Dataframe::InvalidDataframeError, error.class
+  end
+
   def test_parses_from_csv
     csv = File.read("./test/files/adults.csv")
     dataframe = Dataframe.from_csv(csv)
@@ -209,11 +224,11 @@ class DataframeTest < Minitest::Test
 
   def test_removes_columns
     dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
-    new_headers = ["Age", "Address"]
+    removing_headers = ["Age", "Address"]
 
-    names = dataframe.remove_columns(new_headers)
+    names = dataframe.remove_columns(removing_headers)
 
-    assert_equal new_headers, names.headers
+    assert_equal ["Name"], names.headers
     assert_equal ["Jim"], names.rows[0]
   end
 
