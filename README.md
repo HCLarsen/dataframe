@@ -20,6 +20,8 @@ The Dataframe shard allows programmers to work with and manipulate data in a dat
 
 ```crystal
 require "dataframe"
+
+dataframe = Dataframe.new()
 ```
 
 TODO: Write usage instructions here
