@@ -46,4 +46,15 @@ class RowTest < Minitest::Test
 
     assert_equal %(Dataframe::Row{"Name" => "Jim", "Age" => 44}), row.to_s
   end
+
+  def test_equality
+    row1 = Dataframe::Row{"Name" => "Jim", "Age" => 44}
+    row2 = Dataframe::Row{"Name" => "Jim", "Age" => 44}
+    row3 = Dataframe::Row{"Age" => 44, "Name" => "Jim"}
+    row4 = Dataframe::Row{"Name" => "Jim", "Address" => "Hawkins, Indiana, USA"}
+
+    assert row1 == row2
+    assert row1 == row3
+    refute row1 == row4
+  end
 end

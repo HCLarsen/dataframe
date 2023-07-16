@@ -12,6 +12,10 @@ class Dataframe
       @data = Hash.zip(headers, values)
     end
 
+    def ==(other : Row) : Bool
+      to_h == other.to_h
+    end
+
     # Returns the value for the key given by *key*.
     def [](key : String) : Type
       @data[key]
