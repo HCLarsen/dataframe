@@ -21,7 +21,18 @@ The Dataframe shard allows programmers to work with and manipulate data in a dat
 ```crystal
 require "dataframe"
 
-dataframe = Dataframe.new()
+headers = ["Name", "Age", "Address"]
+rows = [
+  ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
+  ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
+  ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
+]
+
+dataframe = Dataframe.new(headers, rows)
+
+dataframe.shape               #=> {2, 3}
+dataframe.rows[1]             #=> ["Yuri", 47, "Siberia, USSR"]
+dataframe.column("Age").to_a  #=> [41, 47, 40]
 ```
 
 TODO: Write usage instructions here
