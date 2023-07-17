@@ -1,5 +1,7 @@
 require "csv"
 
+require "./row"
+
 class Dataframe
   VERSION = "0.1.0"
 
@@ -13,15 +15,14 @@ class Dataframe
     end
   end
 
-  # Raised when adding a row of an inconsistent length
-  class UnequalRowSizeError < Exception
-    def initialize(message = "Row has different size than Dataframe")
+  class InvalidRowError < Exception
+    def initialize(message = "Row is an invalid match for Dataframe")
       super(message)
     end
   end
 
   @columns = Hash(String, ColumnType).new
-  getter rows = Array(Array(Type)).new
+  getter data = Array(Array(Type)).new
 
   # Creates an empty `Dataframe` instance, with no columns or rows.
   def initialize
@@ -65,12 +66,31 @@ class Dataframe
     add_row(row)
   end
 
+  def <<(row : Row)
+    add_row(row)
+  end
+
   def add_row(row : Array(Type))
     if row.size != headers.size
-      raise UnequalRowSizeError.new
+      raise InvalidRowError.new("Row has different size than Dataframe")
     end
 
-    @rows.push(row)
+    @data.push(row)
+  end
+
+  def add_row(row : Row)
+    row.headers.each do |header|
+      if !headers.includes?(header)
+        raise InvalidRowError.new("Row has values not in Dataframe")
+      end
+    end
+
+    new_row = Row.new
+    headers.each do |header|
+      new_row[header] = row[header]?
+    end
+
+    @data.push(new_row.to_a)
   end
 
   # Returns the column names as an `Array`.
@@ -78,14 +98,21 @@ class Dataframe
     @columns.keys
   end
 
+  # Returns the data of the `Dataframe` as an array of `Row`.
+  def rows : Array(Row)
+    @data.map do |data_row|
+      Row.new(data_row, headers)
+    end
+  end
+
   # Returns a `Tuple` of the dataframe's dimensions in the form of { rows, columns }
   def shape : Tuple(Int32, Int32)
-    {@rows.size, @columns.keys.size}
+    {@data.size, @columns.keys.size}
   end
 
   # def columns : Hash(String, Type)
   #   output = {} of String => Type
-  #   data_columns = @rows.transpose
+  #   data_columns = @data.transpose
 
   #   @columns.each do |key, value|
   #     output[key]
@@ -126,7 +153,7 @@ class Dataframe
   # def columns : Hash(String, Array(String))
   #   columns = Hash(String, Array(String)).new
 
-  #   @rows.transpose.each_with_index do |column, index|
+  #   @data.transpose.each_with_index do |column, index|
   #     columns[@headers[index]] = column
   #   end
 
@@ -161,7 +188,7 @@ class Dataframe
   #   duplicate_rows = Array(Array(String)).new
   #   new_rows = Array(Array(String)).new
 
-  #   @rows.each do |row|
+  #   @data.each do |row|
   #     values = header_indexes.map { |i| row[i] }
   #     indexes[values.join] += 1
   #   end
@@ -169,7 +196,7 @@ class Dataframe
   #   indexes.select! { |k, v| v > 1 }
   #   set = Set.new(indexes.keys)
 
-  #   @rows.each do |row|
+  #   @data.each do |row|
   #     values = header_indexes.map { |i| row[i] }
   #     index = values.join
 
@@ -181,14 +208,14 @@ class Dataframe
   #   end
 
   #   if remove
-  #     @rows = new_rows
+  #     @data = new_rows
   #   end
 
   #   Dataframe.new(self.headers, duplicate_rows)
   # end
 
   # def each(& : Array(String) ->) : Nil
-  #   @rows.each do |row|
+  #   @data.each do |row|
   #     yield row
   #   end
   # end
@@ -230,7 +257,7 @@ class Dataframe
 
   #   hash = Hash(String, Array(String)).new
 
-  #   @rows.each do |row|
+  #   @data.each do |row|
   #     values = header_indexes.map { |i| row[i] }
   #     index = values.join
   #     hash[index] = row
@@ -295,7 +322,7 @@ class Dataframe
   #   end
 
   #   new_columns[header] = new_column
-  #   @rows = new_columns.values.transpose
+  #   @data = new_columns.values.transpose
   # end
 
   # Return a new `Dataframe` without the specified columns.
@@ -319,7 +346,7 @@ class Dataframe
 
   #     indexes = [] of String
 
-  #     @rows.each do |row|
+  #     @data.each do |row|
   #       values = header_indexes.map { |i| row[i] }
   #       index = values.join
   #       unless indexes.includes?(index)
@@ -328,10 +355,10 @@ class Dataframe
   #       end
   #     end
   #   else
-  #     new_rows = @rows.uniq
+  #     new_rows = @data.uniq
   #   end
 
-  #   @rows = new_rows
+  #   @data = new_rows
   # end
 
   # Changes the header of the specified column to a new value.
@@ -351,17 +378,17 @@ class Dataframe
 
   # Returns the number of rows in the `Dataframe`.
   def row_count
-    @rows.size
+    @data.size
   end
 
   # def select_rows(& : Array(String) ->) : Dataframe
-  #   new_rows = @rows.select { |e| yield e }
+  #   new_rows = @data.select { |e| yield e }
 
   #   Dataframe.new(@headers, new_rows)
   # end
 
   # def select_rows!(& : Array(String) ->) : Nil
-  #   @rows.select! { |e| yield e }
+  #   @data.select! { |e| yield e }
   # end
 
   # Return a new `Dataframe` with only the specified columns.
@@ -376,12 +403,12 @@ class Dataframe
   # Outputs the `Dataframe` instance as a string in CSV format.
   # def to_csv
   #   output = @headers.map { |e| %("#{e}") }.join(",") + "\n"
-  #   return output + @rows.map { |row| row.map { |e| %("#{e}") }.join(",") + "\n" }.join
+  #   return output + @data.map { |row| row.map { |e| %("#{e}") }.join(",") + "\n" }.join
   # end
 
   # Outputs the `Dataframe` instance in an easy to read table format.
   # def to_table(range = (0..-1)) : String
-  #   headers_and_rows = [@headers] + @rows
+  #   headers_and_rows = [@headers] + @data
 
   #   column_widths = headers_and_rows.transpose.map do |column|
   #     column.max_of &.size
@@ -389,7 +416,7 @@ class Dataframe
 
   #   table = @headers.map_with_index { |e, i| pad_cell(e, column_widths[i]) }.join("  ")
 
-  #   @rows[range].each do |row|
+  #   @data[range].each do |row|
   #     line = row.map_with_index { |e, i| pad_cell(e, column_widths[i]) }.join("  ")
   #     table += "\n" + line
   #   end

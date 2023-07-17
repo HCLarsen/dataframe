@@ -21,6 +21,11 @@ class Dataframe
       @data[key]
     end
 
+    # Returns the value for the key given by *key*, or `nil` if it doesn't exist.
+    def []?(key : String) : Type
+      @data[key]?
+    end
+
     # Sets the value of *key* to the given *value*.
     def []=(key : String, value : Type)
       @data[key] = value

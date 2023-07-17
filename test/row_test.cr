@@ -38,7 +38,7 @@ class RowTest < Minitest::Test
     assert_equal 41, row["Age"]
 
     row["Age"] = 44
-    assert_equal 44, row["Age"]
+    assert_equal 44, row["Age"]?
   end
 
   def test_outputs_to_string

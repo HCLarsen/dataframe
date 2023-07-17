@@ -7,7 +7,8 @@ class DataframeTest < Minitest::Test
     dataframe = Dataframe.new
 
     assert_equal [] of String, dataframe.headers
-    assert_equal 0, dataframe.rows.size
+    expected = {0, 0}
+    assert_equal expected, dataframe.shape
   end
 
   def test_initializes_with_headers
@@ -28,24 +29,53 @@ class DataframeTest < Minitest::Test
     assert_equal expected, dataframe.shape
   end
 
-  def test_adds_row
+  def test_initializes_from_array_of_arrays
+    headers = ["Name", "Age", "Address"]
+    data = [
+      ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
+      ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
+      ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
+    ]
+
+    dataframe = Dataframe.new(headers, data)
+
+    assert_equal headers, dataframe.headers
+    assert_equal data, dataframe.data
+  end
+
+  def test_raises_for_uneven_rows
+    headers = ["Name", "Age", "Address"]
+    data = [
+      ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
+      ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
+      ["Murray", 40] of Dataframe::Type,
+    ]
+
+    error = assert_raises do
+      dataframe = Dataframe.new(headers, data)
+    end
+
+    assert_equal Dataframe::InvalidDataframeError, error.class
+  end
+
+  def test_adds_data_rows
     first_row = ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type
     second_row = ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type
     columns = {"Name" => String, "Age" => Int32, "Address" => String}
     dataframe = Dataframe.new(columns)
 
     dataframe.add_row(first_row)
-    assert_equal first_row, dataframe.rows[0]
+    assert_equal first_row, dataframe.data[0]
     expected = {1, 3}
     assert_equal expected, dataframe.shape
 
     dataframe << second_row
-    assert_equal second_row, dataframe.rows[1]
+    assert_equal second_row, dataframe.data[1]
     expected = {2, 3}
     assert_equal expected, dataframe.shape
   end
 
-  def test_raises_for_wrong_row_size
+  def test_raises_for_wrong_data_row_size
     columns = {"Name" => String, "Age" => Int32, "Address" => String}
     dataframe = Dataframe.new(columns)
 
@@ -55,37 +85,55 @@ class DataframeTest < Minitest::Test
       dataframe.add_row(row)
     end
 
-    assert_equal Dataframe::UnequalRowSizeError, error.class
+    assert_equal Dataframe::InvalidRowError, error.class
     assert_equal "Row has different size than Dataframe", error.message
   end
 
-  def test_initializes_from_array_of_arrays
+  def test_adds_rows
+    columns = {"Name" => String, "Age" => Int32, "Address" => String}
+    first_row = Dataframe::Row.new(["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type, columns.keys)
+    second_row = Dataframe::Row.new(["Yuri", 47, "Siberia, USSR"] of Dataframe::Type, columns.keys)
+
+    dataframe = Dataframe.new(columns)
+
+    dataframe.add_row(first_row)
+    assert_equal first_row, dataframe.rows[0]
+
+    dataframe << second_row
+    assert_equal second_row, dataframe.rows[1]
+  end
+
+  def test_adds_incomplete_rows
     headers = ["Name", "Age", "Address"]
-    rows = [
-      ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
+    data = [
       ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
       ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
     ]
 
-    dataframe = Dataframe.new(headers, rows)
+    dataframe = Dataframe.new(headers, data)
 
-    assert_equal headers, dataframe.headers
-    assert_equal rows, dataframe.rows
+    row = Dataframe::Row{"Name" => "Jim", "Address" => "Hawkins, Indiana, USA"}
+    dataframe << row
+
+    assert_equal ["Jim", nil, "Hawkins, Indiana, USA"], dataframe.data[2]
   end
 
-  def test_raises_for_uneven_rows
+  def test_raises_for_invalid_rows
     headers = ["Name", "Age", "Address"]
-    rows = [
-      ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
+    data = [
       ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
-      ["Murray", 40] of Dataframe::Type,
+      ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
     ]
 
+    dataframe = Dataframe.new(headers, data)
+
+    row = Dataframe::Row{"Name" => "Jim", "Location" => "Hawkins, Indiana, USA"}
+
     error = assert_raises do
-      dataframe = Dataframe.new(headers, rows)
+      dataframe << row
     end
 
-    assert_equal Dataframe::InvalidDataframeError, error.class
+    assert_equal "Row has values not in Dataframe", error.message
   end
 
   def test_gets_columns
@@ -96,14 +144,14 @@ class DataframeTest < Minitest::Test
   #   dataframe = Dataframe.from_csv(csv)
 
   #   assert_equal ["Name", "Age", "Address"], dataframe.headers
-  #   assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.rows[0]
+  #   assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.data[0]
   # end
 
   # def test_parses_from_csv_file
   #   dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
 
   #   assert_equal ["Name", "Age", "Address"], dataframe.headers
-  #   assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.rows[0]
+  #   assert_equal ["Jim","41","Hawkins, Indiana, USA"], dataframe.data[0]
   # end
 
   # def test_raises_for_invalid_csv
@@ -138,9 +186,9 @@ class DataframeTest < Minitest::Test
 
   #   joined = kids.inner_join(school, on: ["Name", "Age"])
 
-  #   assert_equal 3, joined.rows.size
+  #   assert_equal 3, joined.data.size
   #   assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
-  #   assert_equal ["Eddie", "20", "Male", "12"], joined.rows[0]
+  #   assert_equal ["Eddie", "20", "Male", "12"], joined.data[0]
   # end
 
   # def test_left_outer_join_dataframes
@@ -149,9 +197,9 @@ class DataframeTest < Minitest::Test
 
   #   joined = kids.left_outer_join(school, on: ["Name", "Age"])
 
-  #   assert_equal 4, joined.rows.size
+  #   assert_equal 4, joined.data.size
   #   assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
-  #   assert_equal ["El", "15", "Female", ""], joined.rows[2]
+  #   assert_equal ["El", "15", "Female", ""], joined.data[2]
   # end
 
   # def test_right_outer_joins_dataframes
@@ -160,9 +208,9 @@ class DataframeTest < Minitest::Test
 
   #   joined = kids.right_outer_join(school, on: ["Name", "Age"])
 
-  #   assert_equal 4, joined.rows.size
+  #   assert_equal 4, joined.data.size
   #   assert_equal ["Name", "Age", "Grade", "Gender"], joined.headers
-  #   assert_equal ["Gareth", "17", "11", ""], joined.rows.last
+  #   assert_equal ["Gareth", "17", "11", ""], joined.data.last
   # end
 
   # def test_full_join
@@ -171,10 +219,10 @@ class DataframeTest < Minitest::Test
 
   #   joined = kids.full_join(school, on: ["Name", "Age"])
 
-  #   assert_equal 5, joined.rows.size
+  #   assert_equal 5, joined.data.size
   #   assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
-  #   assert_equal ["Eddie", "20", "Male", "12"], joined.rows[0]
-  #   assert_equal ["Gareth", "17", "", "11"], joined.rows.last
+  #   assert_equal ["Eddie", "20", "Male", "12"], joined.data[0]
+  #   assert_equal ["Gareth", "17", "", "11"], joined.data.last
   # end
 
   # def test_modify_column
@@ -188,12 +236,12 @@ class DataframeTest < Minitest::Test
   #     e.downcase
   #   end
 
-  #   assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.rows[0]
+  #   assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.data[0]
   # end
 
   # def test_remove_duplicates
   #   headers = ["Name", "Age", "Address"]
-  #   rows = [
+  #   data = [
   #     ["Jim", "41", "Hawkins, Indiana, USA"],
   #     ["Eddie", "20", "Hawkins, Indiana, USA"],
   #     ["Jim", "41", "Siberia, USSR"],
@@ -201,7 +249,7 @@ class DataframeTest < Minitest::Test
   #     ["Jim", "41", "Siberia, USSR"]
   #   ]
 
-  #   dataframe = Dataframe.new(headers, rows)
+  #   dataframe = Dataframe.new(headers, data)
 
   #   dataframe.remove_duplicates(["Name"])
 
@@ -211,7 +259,7 @@ class DataframeTest < Minitest::Test
   #     ["Yuri", "47", "Siberia, USSR"]
   #   ]
 
-  #   assert_equal expected, dataframe.rows
+  #   assert_equal expected, dataframe.data
   # end
 
   # def test_remove_duplicates_without_args
@@ -228,7 +276,7 @@ class DataframeTest < Minitest::Test
   #     ["Joyce", "44", "Lenora Hills, California, USA"],
   #   ]
 
-  #   assert_equal expected, dataframe.rows
+  #   assert_equal expected, dataframe.data
   # end
 
   # def test_get_duplicates
@@ -244,7 +292,7 @@ class DataframeTest < Minitest::Test
   #     ["Jim", "44", "Hawkins, Indiana, USA"],
   #   ]
 
-  #   assert_equal expected, duplicates.rows
+  #   assert_equal expected, duplicates.data
   # end
 
   # def test_remove_and_return_duplicates
@@ -265,8 +313,8 @@ class DataframeTest < Minitest::Test
   #     ["Jim", "44", "Hawkins, Indiana, USA"],
   #   ]
 
-  #   assert_equal expected, dataframe.rows
-  #   assert_equal expected_duplicates, duplicates.rows
+  #   assert_equal expected, dataframe.data
+  #   assert_equal expected_duplicates, duplicates.data
   # end
 
   # def test_selects_columns
@@ -276,7 +324,7 @@ class DataframeTest < Minitest::Test
   #   ageless = dataframe.select_columns(new_headers)
 
   #   assert_equal new_headers, ageless.headers
-  #   assert_equal ["Jim","Hawkins, Indiana, USA"], ageless.rows[0]
+  #   assert_equal ["Jim","Hawkins, Indiana, USA"], ageless.data[0]
   # end
 
   # def test_removes_columns
@@ -286,7 +334,7 @@ class DataframeTest < Minitest::Test
   #   names = dataframe.remove_columns(removing_headers)
 
   #   assert_equal ["Name"], names.headers
-  #   assert_equal ["Jim"], names.rows[0]
+  #   assert_equal ["Jim"], names.data[0]
   # end
 
   # def test_renames_column
@@ -324,18 +372,18 @@ class DataframeTest < Minitest::Test
   # def test_filters_with_select
   #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
 
-  #   hawkins = dataframe.select_rows { |e| e[2] == "9" }
+  #   hawkins = dataframe.select_data { |e| e[2] == "9" }
 
-  #   assert_equal ["Mike","15","9"], hawkins.rows[0]
-  #   assert_equal ["Dustin","15","9"], hawkins.rows[1]
+  #   assert_equal ["Mike","15","9"], hawkins.data[0]
+  #   assert_equal ["Dustin","15","9"], hawkins.data[1]
   # end
 
   # def test_filters_in_place_with_select
   #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
 
-  #   dataframe.select_rows! { |e| e[2] == "9" }
+  #   dataframe.select_data! { |e| e[2] == "9" }
 
-  #   assert_equal ["Mike","15","9"], dataframe.rows[0]
-  #   assert_equal ["Dustin","15","9"], dataframe.rows[1]
+  #   assert_equal ["Mike","15","9"], dataframe.data[0]
+  #   assert_equal ["Dustin","15","9"], dataframe.data[1]
   # end
 end
