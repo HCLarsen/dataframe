@@ -36,6 +36,13 @@ class ColumnTest < Minitest::Test
     assert_equal expected, error.message
   end
 
+  def test_outputs_to_string
+    array = [44, 44, 47, 40] of Dataframe::Type
+    column = Dataframe::Column(Int32).new(array)
+
+    assert_equal %(Dataframe::Column{44, 44, 47, 40}), column.to_s
+  end
+
   def test_performs_math_functions
     array = [44, 44, 47, 40] of Dataframe::Type
     int_column = Dataframe::Column(Int32).new(array)

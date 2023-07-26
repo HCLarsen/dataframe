@@ -4,6 +4,8 @@ class Dataframe
 
     @data = Array(T).new
 
+    delegate :size, to: @data
+
     # Creates an empty `Column`.
     def initialize
       if !Dataframe::TYPES.includes?(T)
@@ -18,10 +20,6 @@ class Dataframe
 
     def [](index : Int32)
       @data[index]
-    end
-
-    def size : Int32
-      @data.size
     end
 
     def sum : T
@@ -53,6 +51,12 @@ class Dataframe
 
     def to_a : Array(T)
       @data
+    end
+
+    def to_s(io : IO) : Nil
+      io << "Dataframe::Column{"
+      join io, ", ", &.inspect(io)
+      io << '}'
     end
 
     @[AlwaysInline]
