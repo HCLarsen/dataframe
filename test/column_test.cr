@@ -81,7 +81,7 @@ class ColumnTest < Minitest::Test
     assert_equal "Calling numeric method on Bool Column", error.message
   end
 
-  def test_performs_statistical_functions
+  def test_returns_modes
     array = [false, true, true, true] of Dataframe::Type
     bool_column = Dataframe::Column(Bool).new(array)
 
@@ -95,6 +95,6 @@ class ColumnTest < Minitest::Test
     string_array = ["Joyce", "Jim", "Yuri", "Murray"] of Dataframe::Type
     string_column = Dataframe::Column(String).new(string_array)
 
-    assert_equal string_array, string_column.mode
+    assert_equal [] of String, string_column.mode
   end
 end

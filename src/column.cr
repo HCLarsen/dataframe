@@ -43,6 +43,11 @@ class Dataframe
     end
 
     def mode : Array(T)
+      compact = @data.compact
+      if compact.uniq.size == compact.size
+        return [] of T
+      end
+
       frequency = freq
       max = freq.values.max
 
