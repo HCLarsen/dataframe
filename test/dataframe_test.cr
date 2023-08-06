@@ -3,6 +3,13 @@ require "minitest/autorun"
 require "/../src/dataframe"
 
 class DataframeTest < Minitest::Test
+  @headers = ["Name", "Age", "Address"]
+  @data = [
+    ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
+    ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
+    ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
+  ]
+
   def test_initializes_empty_dataframe
     dataframe = Dataframe.new
 
@@ -137,6 +144,110 @@ class DataframeTest < Minitest::Test
   end
 
   def test_gets_columns
+    dataframe = Dataframe.new(@headers, @data)
+
+    columns = dataframe.columns
+
+    assert_equal ["Jim", "Yuri", "Murray"], columns["Name"].to_a
+  end
+
+  def test_adds_empty_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.add_column("Married?", Bool)
+
+    assert_equal ["Name", "Age", "Address", "Married?"], dataframe.headers
+    assert_equal Dataframe::Column(Bool), dataframe.columns["Married?"].class
+    assert_equal [nil, nil, nil], dataframe.columns["Married?"].to_a
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA", nil], dataframe.data[0]
+  end
+
+  def test_adds_column_with_values
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.add_column("Married?", [false, false, false])
+
+    assert_equal ["Name", "Age", "Address", "Married?"], dataframe.headers
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA", false], dataframe.data[0]
+  end
+
+  # This feature will generate a new column by iterating over existing row objects, and generating the value for the new column based on the return value of the block.
+  # def test_column_with_block
+  # end
+
+  def test_raises_for_invalid_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    error = assert_raises do
+      dataframe.add_column("Married?", [false, false])
+    end
+
+    assert_equal "New column must be same size as other columns: 3", error.message
+  end
+
+  def test_renames_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.rename_column("Name", "Full Name")
+
+    assert_equal ["Full Name", "Age", "Address"], dataframe.headers
+  end
+
+  def test_filters_columns
+    dataframe = Dataframe.new(@headers, @data)
+    new_headers = ["Name", "Address"]
+
+    ageless = dataframe.select_columns(new_headers)
+
+    assert_equal new_headers, ageless.headers
+    assert_equal ["Jim", "Hawkins, Indiana, USA"], ageless.data[0]
+  end
+
+  def test_filters_columns_in_place
+    dataframe = Dataframe.new(@headers, @data)
+    new_headers = ["Name", "Address"]
+
+    dataframe.select_columns!(new_headers)
+
+    assert_equal new_headers, dataframe.headers
+    assert_equal ["Jim", "Hawkins, Indiana, USA"], dataframe.data[0]
+  end
+
+  def test_removes_columns
+    dataframe = Dataframe.new(@headers, @data)
+    removing_headers = ["Age", "Address"]
+
+    names = dataframe.reject_columns(removing_headers)
+
+    assert_equal ["Name"], names.headers
+    assert_equal ["Jim"], names.data[0]
+  end
+
+  def test_removes_columns_in_place
+    dataframe = Dataframe.new(@headers, @data)
+    removing_headers = ["Age", "Address"]
+
+    dataframe.reject_columns!(removing_headers)
+
+    assert_equal ["Name"], dataframe.headers
+    assert_equal ["Jim"], dataframe.data[0]
+  end
+
+  # def test_modify_column
+  #   dataframe = Dataframe.new(@headers, @data)
+
+  #   dataframe.modify_column("Address") do |e|
+  #     e.upcase
+  #   end
+
+  #   dataframe.modify_column("Name") do |e|
+  #     e.downcase
+  #   end
+
+  #   assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.data[0]
+  # end
+
+  def test_rearranges_columns
   end
 
   # def test_parses_from_csv
@@ -175,9 +286,6 @@ class DataframeTest < Minitest::Test
   #   dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
 
   #   assert_equal ["Jim", "Yuri", "Murray"], dataframe.columns["Name"]
-  # end
-
-  # def test_adds_column
   # end
 
   # def test_inner_joins_dataframes_on_specified_columns
@@ -223,20 +331,6 @@ class DataframeTest < Minitest::Test
   #   assert_equal ["Name", "Age", "Gender", "Grade"], joined.headers
   #   assert_equal ["Eddie", "20", "Male", "12"], joined.data[0]
   #   assert_equal ["Gareth", "17", "", "11"], joined.data.last
-  # end
-
-  # def test_modify_column
-  #   dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
-
-  #   dataframe.modify_column("Address") do |e|
-  #     e.upcase
-  #   end
-
-  #   dataframe.modify_column("Name") do |e|
-  #     e.downcase
-  #   end
-
-  #   assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.data[0]
   # end
 
   # def test_remove_duplicates
@@ -315,34 +409,6 @@ class DataframeTest < Minitest::Test
 
   #   assert_equal expected, dataframe.data
   #   assert_equal expected_duplicates, duplicates.data
-  # end
-
-  # def test_selects_columns
-  #   dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
-  #   new_headers = ["Name", "Address"]
-
-  #   ageless = dataframe.select_columns(new_headers)
-
-  #   assert_equal new_headers, ageless.headers
-  #   assert_equal ["Jim","Hawkins, Indiana, USA"], ageless.data[0]
-  # end
-
-  # def test_removes_columns
-  #   dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
-  #   removing_headers = ["Age", "Address"]
-
-  #   names = dataframe.remove_columns(removing_headers)
-
-  #   assert_equal ["Name"], names.headers
-  #   assert_equal ["Jim"], names.data[0]
-  # end
-
-  # def test_renames_column
-  #   dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
-
-  #   dataframe.rename_column("Address", "Location")
-
-  #   assert_equal ["Name", "Age", "Location"], dataframe.headers
   # end
 
   # def test_outputs_table_string

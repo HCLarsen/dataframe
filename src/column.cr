@@ -1,10 +1,13 @@
+require "./common"
+
 class Dataframe
   class Column(T)
-    include Indexable::Mutable(T)
+    # include Indexable::Mutable(T?)
 
-    @data = Array(T).new
+    @data = Array(T?).new
 
     delegate :size, to: @data
+    delegate :max, :min, to: @data.compact
 
     # Creates an empty `Column`.
     def initialize
@@ -15,30 +18,37 @@ class Dataframe
 
     # Creates a `Column` from the values in **new_data**.
     def initialize(new_data : Array(Type))
-      @data = new_data.map { |e| e.as(T) }
+      @data = new_data.map do |e|
+        if e.nil?
+          nil
+        else
+          e.as(T)
+        end
+      end
+    end
+
+    def ==(other : Column) : Bool
+      @data == other.to_a && typeof(::Enumerable.element_type(@data)) == typeof(::Enumerable.element_type(other.to_a))
     end
 
     def [](index : Int32)
       @data[index]
     end
 
-    def sum : T
-      perform_numeric_operation do
-        @data.sum
-      end
+    def map(& : T? -> T?) : Column(T?)
+      new_data = @data.map { |e| yield e }
+      Column(T?).new(new_data)
     end
 
-    private def perform_numeric_operation(&)
-      {% if T == Int32 || T == Float64 %}
-        yield
-      {% else %}
-        raise NonNumericTypeError.new(T)
-      {% end %}
+    def sum : T
+      perform_numeric_operation do
+        @data.compact.sum
+      end
     end
 
     def avg : Float64
       perform_numeric_operation do
-        sum / @data.size
+        sum / @data.compact.size
       end
     end
 
@@ -54,18 +64,18 @@ class Dataframe
       frequency.select { |k, v| v == max }.map { |k, v| k }
     end
 
-    def to_a : Array(T)
+    def to_a : Array(T?)
       @data
     end
 
     def to_s(io : IO) : Nil
       io << "Dataframe::Column{"
-      join io, ", ", &.inspect(io)
+      @data.join io, ", ", &.inspect(io)
       io << '}'
     end
 
     @[AlwaysInline]
-    def unsafe_fetch(index : Int) : T
+    def unsafe_fetch(index : Int) : T?
       @data[index]
     end
 
@@ -74,9 +84,17 @@ class Dataframe
       @data[index] = value
     end
 
+    private def perform_numeric_operation(&)
+      {% if T == Int32 || T == Float64 %}
+        yield
+      {% else %}
+        raise NonNumericTypeError.new(T)
+      {% end %}
+    end
+
     private def freq : Hash(T, Int32)
       frequency = Hash(T, Int32).new(0)
-      @data.each do |e|
+      @data.compact.each do |e|
         frequency[e] += 1
       end
 

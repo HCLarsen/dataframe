@@ -1,46 +1,10 @@
 require "csv"
 
+require "./column"
 require "./row"
 
 class Dataframe
   VERSION = "0.1.0"
-
-  # nodoc
-  TYPES = [String, Int32, Float64, Bool]
-
-  alias Type = String | Int32 | Float64 | Bool | Nil
-  alias ColumnType = String.class | Int32.class | Float64.class | Bool.class
-
-  # Raised when an error is encountered during parsing.
-  class InvalidDataframeError < Exception
-    def initialize(message = "Rows are of uneven length")
-      super(message)
-    end
-  end
-
-  class InvalidTypeError < Exception
-    def initialize(class_name : Class)
-      types = TYPES.map { |e| e.to_s }.sort.join(" | ")
-
-      message = "Expected type to be (#{types}), not #{class_name}"
-
-      super(message)
-    end
-  end
-
-  class InvalidRowError < Exception
-    def initialize(message = "Row is an invalid match for Dataframe")
-      super(message)
-    end
-  end
-
-  class NonNumericTypeError < Exception
-    def initialize(class_name : Class)
-      message = "Calling numeric method on #{class_name} Column"
-
-      super(message)
-    end
-  end
 
   @columns = Hash(String, ColumnType).new
   getter data = Array(Array(Type)).new
@@ -51,9 +15,9 @@ class Dataframe
 
   # Creates a new `Dataframe` instance with the specified headers, and columns
   # of type `String`.
-  def initialize(headers : Array(String))
-    types = Array(ColumnType).new(headers.size, String)
-    @columns = Hash.zip(headers, types)
+  def initialize(column_names : Array(String))
+    types = Array(ColumnType).new(column_names.size, String)
+    @columns = Hash.zip(column_names, types)
   end
 
   def initialize(columns)
@@ -119,6 +83,119 @@ class Dataframe
     @columns.keys
   end
 
+  def columns : Hash(String, Column(String) | Column(Int32) | Column(Float64) | Column(Bool))
+    output = {} of String => (Column(String) | Column(Int32) | Column(Float64) | Column(Bool))
+    data_columns = @data.transpose
+
+    @columns.each_with_index do |key_value, index|
+      column_header = key_value[0]
+      column_type = key_value[1]
+      column_data = data_columns[index]
+      output[column_header] = create_column(column_type, column_data)
+    end
+
+    output
+  end
+
+  private def create_column(type : Class, data : Array(Type))
+    if type == String
+      Dataframe::Column(String).new(data)
+    elsif type == Int32
+      Dataframe::Column(Int32).new(data)
+    elsif type == Float64
+      Dataframe::Column(Float64).new(data)
+    elsif type == Bool
+      Dataframe::Column(Bool).new(data)
+    else
+      raise InvalidTypeError.new(type)
+    end
+  end
+
+  def add_column(header : String, type : ColumnType = String)
+    @columns[header] = type
+
+    @data.map! do |data_row|
+      data_row.push(nil)
+    end
+  end
+
+  def add_column(header : String, data : Array(Type))
+    if data.size != @data.size
+      raise InvalidDataframeError.new("New column must be same size as other columns: #{@data.size}")
+    end
+
+    @columns[header] = data.compact.first.class
+
+    @data.map_with_index! do |data_row, index|
+      data_row.push(data[index])
+    end
+  end
+
+  # Changes the header of the specified column to a new value.
+  #
+  # Makes no changes if *old_header* isn't a header.
+  def rename_column(old_header, new_header)
+    column_names = @columns.keys
+    types = @columns.values
+    if index = column_names.index(old_header)
+      column_names[index] = new_header
+    end
+    @columns = Hash.zip(column_names, types)
+  end
+
+  # Returns a new `Dataframe` without the given columns.
+  def reject_columns(headers : Array(String)) : Dataframe
+    new_columns = columns.reject(headers)
+
+    new_rows = new_columns.values.map(&.to_a).transpose
+
+    Dataframe.new(new_columns.keys, new_rows)
+  end
+
+  # Removes a list of columns.
+  def reject_columns!(headers : Array(String)) : self
+    new_columns = columns.reject(headers)
+    @data = new_columns.values.map(&.to_a).transpose
+
+    @columns.reject!(headers)
+
+    self
+  end
+
+  # Returns a new `Dataframe` with the given columns.
+  def select_columns(headers : Array(String)) : Dataframe
+    new_columns = columns.select(headers)
+    new_rows = new_columns.values.map(&.to_a).transpose
+
+    Dataframe.new(headers, new_rows)
+  end
+
+  # Removes every column except the given ones.
+  def select_columns!(headers : Array(String)) : self
+    new_columns = columns.select(headers)
+    @data = new_columns.values.map(&.to_a).transpose
+
+    @columns.select!(headers)
+
+    self
+  end
+
+  # Iterates through all elements in the column specified by *header*, running
+  # the provided block on each element.
+  # def modify_column(header : String, & : Type -> Type)
+  #   new_columns = columns
+
+  #   new_column = new_columns[header].map do |element|
+  #     yield element
+  #   end
+
+  #   new_columns[header] = new_column
+  #   @data = new_columns.values.transpose
+  # end
+
+  def rearrange_columns
+  end
+
   # Returns the data of the `Dataframe` as an array of `Row`.
   def rows : Array(Row)
     @data.map do |data_row|
@@ -130,17 +207,6 @@ class Dataframe
   def shape : Tuple(Int32, Int32)
     {@data.size, @columns.keys.size}
   end
-
-  # def columns : Hash(String, Type)
-  #   output = {} of String => Type
-  #   data_columns = @data.transpose
-
-  #   @columns.each do |key, value|
-  #     output[key]
-  #   end
-
-  #   output
-  # end
 
   # Creates a new `Dataframe` instance from a CSV string, treating the first
   # row as the header row.
@@ -333,28 +399,6 @@ class Dataframe
   #   Dataframe.new(new_headers, new_rows)
   # end
 
-  # Iterates through all elements in the column specified by *header*, running
-  # the provided block on each element.
-  # def modify_column(header : String, & : String ->)
-  #   new_columns = columns
-
-  #   new_column = new_columns[header].map do |element|
-  #     yield element
-  #   end
-
-  #   new_columns[header] = new_column
-  #   @data = new_columns.values.transpose
-  # end
-
-  # Return a new `Dataframe` without the specified columns.
-  # def remove_columns(headers : Array(String)) : Dataframe
-  #   new_columns = columns.reject(headers)
-
-  #   new_rows = new_columns.values.transpose
-
-  #   Dataframe.new(new_columns.keys, new_rows)
-  # end
-
   # Removes all rows for which a previous row is identical in the columns
   # specified by *headers*.
   #
@@ -382,15 +426,6 @@ class Dataframe
   #   @data = new_rows
   # end
 
-  # Changes the header of the specified column to a new value.
-  #
-  # Makes no changes if *old_header* isn't a header.
-  # def rename_column(old_header, new_header)
-  #   if index = @headers.index(old_header)
-  #     @headers[index] = new_header
-  #   end
-  # end
-
   # Returns a new `Dataframe` that is the result of a right outer join of the
   # receiver and *other*, using the headers in *on* to match rows.
   # def right_outer_join(other : Dataframe, on : Array(String)) : Dataframe
@@ -410,15 +445,6 @@ class Dataframe
 
   # def select_rows!(& : Array(String) ->) : Nil
   #   @data.select! { |e| yield e }
-  # end
-
-  # Return a new `Dataframe` with only the specified columns.
-  # def select_columns(headers : Array(String)) : Dataframe
-  #   new_columns = columns.select(headers)
-
-  #   new_rows = new_columns.values.transpose
-
-  #   Dataframe.new(headers, new_rows)
   # end
 
   # Outputs the `Dataframe` instance as a string in CSV format.
