@@ -184,7 +184,7 @@ class DataframeTest < Minitest::Test
   end
 
   # This feature will generate a new column by iterating over existing row objects, and generating the value for the new column based on the return value of the block.
-  # def test_column_with_block
+  # def test_add_column_with_block
   # end
 
   def test_raises_for_invalid_column

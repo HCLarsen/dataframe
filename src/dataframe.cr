@@ -6,7 +6,7 @@ require "./row"
 class Dataframe
   VERSION = "0.1.0"
 
-  @columns = Hash(String, ColumnType).new
+  @column_defs = Hash(String, ColumnType).new
   getter data = Array(Array(Type)).new
 
   # Creates an empty `Dataframe` instance, with no columns or rows.
@@ -17,11 +17,11 @@ class Dataframe
   # of type `String`.
   def initialize(column_names : Array(String))
     types = Array(ColumnType).new(column_names.size, String)
-    @columns = Hash.zip(column_names, types)
+    @column_defs = Hash.zip(column_names, types)
   end
 
   def initialize(columns)
-    @columns.merge!(columns)
+    @column_defs.merge!(columns)
   end
 
   # Creates a new `Dataframe` instance with the given headers and rows.
@@ -33,7 +33,7 @@ class Dataframe
     headers.each_with_index do |header, index|
       cell = first_row[index]
       if !cell.nil?
-        @columns[header] = cell.class
+        @column_defs[header] = cell.class
       end
     end
 
@@ -85,14 +85,14 @@ class Dataframe
 
   # Returns the column names as an `Array`.
   def headers : Array(String)
-    @columns.keys
+    @column_defs.keys
   end
 
   def columns : Hash(String, Column(String) | Column(Int32) | Column(Float64) | Column(Bool))
     output = {} of String => (Column(String) | Column(Int32) | Column(Float64) | Column(Bool))
     data_columns = @data.transpose
 
-    @columns.each_with_index do |key_value, index|
+    @column_defs.each_with_index do |key_value, index|
       column_header = key_value[0]
       column_type = key_value[1]
       column_data = data_columns[index]
@@ -117,7 +117,7 @@ class Dataframe
   end
 
   def add_column(header : String, type : ColumnType = String)
-    @columns[header] = type
+    @column_defs[header] = type
 
     @data.map! do |data_row|
       data_row.push(nil)
@@ -129,7 +129,7 @@ class Dataframe
       raise InvalidDataframeError.new("New column must be same size as other columns: #{@data.size}")
     end
 
-    @columns[header] = data.compact.first.class
+    @column_defs[header] = data.compact.first.class
 
     @data.map_with_index! do |data_row, index|
       data_row.push(data[index])
@@ -140,12 +140,12 @@ class Dataframe
   #
   # Makes no changes if *old_header* isn't a header.
   def rename_column(old_header, new_header)
-    column_names = @columns.keys
-    types = @columns.values
+    column_names = @column_defs.keys
+    types = @column_defs.values
     if index = column_names.index(old_header)
       column_names[index] = new_header
     end
-    @columns = Hash.zip(column_names, types)
+    @column_defs = Hash.zip(column_names, types)
   end
 
   # Returns a new `Dataframe` without the given columns.
@@ -162,7 +162,7 @@ class Dataframe
     new_columns = columns.reject(headers)
     @data = new_columns.values.map(&.to_a).transpose
 
-    @columns.reject!(headers)
+    @column_defs.reject!(headers)
 
     self
   end
@@ -180,7 +180,7 @@ class Dataframe
     new_columns = columns.select(headers)
     @data = new_columns.values.map(&.to_a).transpose
 
-    @columns.select!(headers)
+    @column_defs.select!(headers)
 
     self
   end
@@ -199,19 +199,6 @@ class Dataframe
     Dataframe.new(new_headers, new_data)
   end
 
-  # Iterates through all elements in the column specified by *header*, running
-  # the provided block on each element.
-  # def modify_column(header : String, & : Type -> Type)
-  #   new_columns = columns
-
-  #   new_column = new_columns[header].map do |element|
-  #     yield element
-  #   end
-
-  #   new_columns[header] = new_column
-  #   @data = new_columns.values.transpose
-  # end
-
   # Returns the data of the `Dataframe` as an array of `Row`.
   def rows : Array(Row)
     @data.map do |data_row|
@@ -221,7 +208,7 @@ class Dataframe
 
   # Returns a `Tuple` of the dataframe's dimensions in the form of { rows, columns }
   def shape : Tuple(Int32, Int32)
-    {@data.size, @columns.keys.size}
+    {@data.size, @column_defs.keys.size}
   end
 
   # Creates a new `Dataframe` instance from a CSV string, treating the first
