@@ -143,6 +143,18 @@ class DataframeTest < Minitest::Test
     assert_equal "Row has values not in Dataframe", error.message
   end
 
+  # def test_iterates
+  #   dataframe = Dataframe.from_csv_file("./test/files/kids.csv")
+
+  #   kids_names = ""
+
+  #   dataframe.each do |row|
+  #     kids_names += "#{row[0]} "
+  #   end
+
+  #   assert_equal "Eddie Mike El Dustin ", kids_names
+  # end
+
   def test_gets_columns
     dataframe = Dataframe.new(@headers, @data)
 
@@ -233,6 +245,19 @@ class DataframeTest < Minitest::Test
     assert_equal ["Jim"], dataframe.data[0]
   end
 
+  def test_rearranges_columns
+    new_headers = ["Name", "Address", "Age"]
+    dataframe = Dataframe.new(@headers, @data)
+
+    new_dataframe = dataframe.order_columns(["Name", "Address", "Age"])
+
+    assert_equal new_headers, new_dataframe.headers
+    assert_equal ["Jim", "Hawkins, Indiana, USA", 41], new_dataframe.data.first?
+
+    # Confirm original is unchanged
+    assert_equal @headers, dataframe.headers
+  end
+
   # def test_modify_column
   #   dataframe = Dataframe.new(@headers, @data)
 
@@ -246,9 +271,6 @@ class DataframeTest < Minitest::Test
 
   #   assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.data[0]
   # end
-
-  def test_rearranges_columns
-  end
 
   # def test_parses_from_csv
   #   csv = File.read("./test/files/adults.csv")
@@ -280,12 +302,6 @@ class DataframeTest < Minitest::Test
   #   dataframe = Dataframe.from_csv_file(filename)
 
   #   assert_equal file, dataframe.to_csv
-  # end
-
-  # def test_gets_columns
-  #   dataframe = Dataframe.from_csv_file("./test/files/adults.csv")
-
-  #   assert_equal ["Jim", "Yuri", "Murray"], dataframe.columns["Name"]
   # end
 
   # def test_inner_joins_dataframes_on_specified_columns
@@ -421,18 +437,6 @@ class DataframeTest < Minitest::Test
   #   expected = "Name    Age  Address              \nJim     41   Hawkins, Indiana, USA\nYuri    47   Siberia, USSR        "
 
   #   assert_equal expected, dataframe.to_table(0..1)
-  # end
-
-  # def test_iterates
-  #   dataframe = Dataframe.from_csv_file("./test/files/kids.csv")
-
-  #   kids_names = ""
-
-  #   dataframe.each do |row|
-  #     kids_names += "#{row[0]} "
-  #   end
-
-  #   assert_equal "Eddie Mike El Dustin ", kids_names
   # end
 
   # def test_filters_with_select

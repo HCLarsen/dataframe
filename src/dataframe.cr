@@ -47,6 +47,11 @@ class Dataframe
     end
   end
 
+  # Returns the number of rows in the `Dataframe`.
+  def row_count
+    @data.size
+  end
+
   def <<(row : Array(Type))
     add_row(row)
   end
@@ -180,6 +185,20 @@ class Dataframe
     self
   end
 
+  def order_columns(new_headers : Array(String)) : Dataframe
+    old_columns = columns
+    column_data = @data.transpose
+    new_column_data = Hash(String, Column(String) | Column(Int32) | Column(Float64) | Column(Bool)).new
+
+    new_headers.each do |header|
+      new_column_data[header] = columns[header]
+    end
+
+    new_data = new_column_data.values.map(&.to_a).transpose
+
+    Dataframe.new(new_headers, new_data)
+  end
+
   # Iterates through all elements in the column specified by *header*, running
   # the provided block on each element.
   # def modify_column(header : String, & : Type -> Type)
@@ -192,9 +211,6 @@ class Dataframe
   #   new_columns[header] = new_column
   #   @data = new_columns.values.transpose
   # end
-
-  def rearrange_columns
-  end
 
   # Returns the data of the `Dataframe` as an array of `Row`.
   def rows : Array(Row)
@@ -431,11 +447,6 @@ class Dataframe
   # def right_outer_join(other : Dataframe, on : Array(String)) : Dataframe
   #   other.left_outer_join(self, on: on)
   # end
-
-  # Returns the number of rows in the `Dataframe`.
-  def row_count
-    @data.size
-  end
 
   # def select_rows(& : Array(String) ->) : Dataframe
   #   new_rows = @data.select { |e| yield e }
