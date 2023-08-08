@@ -83,6 +83,18 @@ class Dataframe
     @data.push(new_row.to_a)
   end
 
+  def each(& : Array(Type) ->) : Nil
+    @data.each do |row|
+      yield row
+    end
+  end
+
+  def each_row(& : Hash(String, Type) ->) : Nil
+    @data.each do |row|
+      yield Hash.zip(headers, row)
+    end
+  end
+
   # Returns the column names as an `Array`.
   def headers : Array(String)
     @column_defs.keys
@@ -302,12 +314,6 @@ class Dataframe
   #   end
 
   #   Dataframe.new(self.headers, duplicate_rows)
-  # end
-
-  # def each(& : Array(String) ->) : Nil
-  #   @data.each do |row|
-  #     yield row
-  #   end
   # end
 
   # Returns a new `Dataframe` that is the result of a full join of the

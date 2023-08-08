@@ -143,16 +143,46 @@ class DataframeTest < Minitest::Test
     assert_equal "Row has values not in Dataframe", error.message
   end
 
-  # def test_iterates
-  #   dataframe = Dataframe.from_csv_file("./test/files/kids.csv")
+  def test_iterates
+    dataframe = Dataframe.new(@headers, @data)
 
-  #   kids_names = ""
+    kids_names = ""
 
-  #   dataframe.each do |row|
-  #     kids_names += "#{row[0]} "
-  #   end
+    dataframe.each do |row|
+      kids_names += "#{row[0]} "
+    end
 
-  #   assert_equal "Eddie Mike El Dustin ", kids_names
+    assert_equal "Jim Yuri Murray ", kids_names
+  end
+
+  def test_iterates_over_rows
+    dataframe = Dataframe.new(@headers, @data)
+
+    kids_names = ""
+
+    dataframe.each_row do |row|
+      kids_names += "#{row["Name"]} "
+    end
+
+    assert_equal "Jim Yuri Murray ", kids_names
+  end
+
+  # def test_filters_with_select
+  #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
+
+  #   hawkins = dataframe.select_data { |e| e[2] == "9" }
+
+  #   assert_equal ["Mike","15","9"], hawkins.data[0]
+  #   assert_equal ["Dustin","15","9"], hawkins.data[1]
+  # end
+
+  # def test_filters_in_place_with_select
+  #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
+
+  #   dataframe.select_data! { |e| e[2] == "9" }
+
+  #   assert_equal ["Mike","15","9"], dataframe.data[0]
+  #   assert_equal ["Dustin","15","9"], dataframe.data[1]
   # end
 
   def test_gets_columns
@@ -437,23 +467,5 @@ class DataframeTest < Minitest::Test
   #   expected = "Name    Age  Address              \nJim     41   Hawkins, Indiana, USA\nYuri    47   Siberia, USSR        "
 
   #   assert_equal expected, dataframe.to_table(0..1)
-  # end
-
-  # def test_filters_with_select
-  #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
-
-  #   hawkins = dataframe.select_data { |e| e[2] == "9" }
-
-  #   assert_equal ["Mike","15","9"], hawkins.data[0]
-  #   assert_equal ["Dustin","15","9"], hawkins.data[1]
-  # end
-
-  # def test_filters_in_place_with_select
-  #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
-
-  #   dataframe.select_data! { |e| e[2] == "9" }
-
-  #   assert_equal ["Mike","15","9"], dataframe.data[0]
-  #   assert_equal ["Dustin","15","9"], dataframe.data[1]
   # end
 end
