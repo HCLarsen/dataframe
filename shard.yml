@@ -4,7 +4,6 @@ version: 0.1.0
 development_dependencies:
   minitest:
     github: ysbaddaden/minitest.cr
-    version: "1.0.1"
 
 authors:
   - Chris Larsen <clarsendev@protonmail.com>

@@ -52,14 +52,17 @@ class Dataframe
     @data.size
   end
 
+  # Append. Alias for `push`.
   def <<(row : Array(Type))
     add_row(row)
   end
 
+  # Append. Alias for `push`.
   def <<(row : Row)
     add_row(row)
   end
 
+  # Append a new row to the bottom of `self`.
   def add_row(row : Array(Type))
     if row.size != headers.size
       raise InvalidRowError.new("Row has different size than Dataframe")
@@ -68,6 +71,7 @@ class Dataframe
     @data.push(row)
   end
 
+  # Append a new row to the bottom of `self`.
   def add_row(row : Row)
     row.headers.each do |header|
       if !headers.includes?(header)
@@ -83,12 +87,14 @@ class Dataframe
     @data.push(new_row.to_a)
   end
 
+  # Iterates over the rows of `self`.
   def each(& : Array(Type) ->) : Nil
     @data.each do |row|
       yield row
     end
   end
 
+  # Iterates over the rows of `self`, returning each row as an instance of `Row`.
   def each_row(& : Hash(String, Type) ->) : Nil
     @data.each do |row|
       yield Hash.zip(headers, row)
@@ -128,6 +134,7 @@ class Dataframe
     end
   end
 
+  # Adds a new empty column to `self`.
   def add_column(header : String, type : ColumnType = String)
     @column_defs[header] = type
 
@@ -136,6 +143,9 @@ class Dataframe
     end
   end
 
+  # Adds a new column to `self`, with content specified by *data*.
+  #
+  # The type is determined by the content of *data*.
   def add_column(header : String, data : Array(Type))
     if data.size != @data.size
       raise InvalidDataframeError.new("New column must be same size as other columns: #{@data.size}")
@@ -197,6 +207,12 @@ class Dataframe
     self
   end
 
+  # Returns a new `Dataframe` with columns ordered by *new_headers*.
+  #
+  # **NOTE**: Any column with names omitted from *new_headers* will not be included
+  # in the new `Dataframe`.
+  #
+  # See also: `Dataframe#select`.
   def order_columns(new_headers : Array(String)) : Dataframe
     old_columns = columns
     column_data = @data.transpose
