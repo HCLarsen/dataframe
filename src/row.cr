@@ -1,3 +1,5 @@
+require "./common"
+
 class Dataframe
   class Row
     @data : Hash(String, Type)

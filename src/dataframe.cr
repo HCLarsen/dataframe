@@ -106,6 +106,7 @@ class Dataframe
     @column_defs.keys
   end
 
+  # Returns the columns of `self` as a `Hash` with the headers as keys, and `Column`s as values.
   def columns : Hash(String, Column(String) | Column(Int32) | Column(Float64) | Column(Bool))
     output = {} of String => (Column(String) | Column(Int32) | Column(Float64) | Column(Bool))
     data_columns = @data.transpose
@@ -118,20 +119,6 @@ class Dataframe
     end
 
     output
-  end
-
-  private def create_column(type : Class, data : Array(Type))
-    if type == String
-      Dataframe::Column(String).new(data)
-    elsif type == Int32
-      Dataframe::Column(Int32).new(data)
-    elsif type == Float64
-      Dataframe::Column(Float64).new(data)
-    elsif type == Bool
-      Dataframe::Column(Bool).new(data)
-    else
-      raise InvalidTypeError.new(type)
-    end
   end
 
   # Adds a new empty column to `self`.
@@ -237,6 +224,20 @@ class Dataframe
   # Returns a `Tuple` of the dataframe's dimensions in the form of { rows, columns }
   def shape : Tuple(Int32, Int32)
     {@data.size, @column_defs.keys.size}
+  end
+
+  private def create_column(type : Class, data : Array(Type))
+    if type == String
+      Dataframe::Column(String).new(data)
+    elsif type == Int32
+      Dataframe::Column(Int32).new(data)
+    elsif type == Float64
+      Dataframe::Column(Float64).new(data)
+    elsif type == Bool
+      Dataframe::Column(Bool).new(data)
+    else
+      raise InvalidTypeError.new(type)
+    end
   end
 
   # Creates a new `Dataframe` instance from a CSV string, treating the first
