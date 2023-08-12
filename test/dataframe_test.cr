@@ -96,6 +96,19 @@ class DataframeTest < Minitest::Test
     assert_equal "Row has different size than Dataframe", error.message
   end
 
+  def test_raises_for_invalid_data_row_type
+    columns = {"Name" => String, "Age" => Int32, "Address" => String}
+    dataframe = Dataframe.new(columns)
+
+    new_row = ["Joyce", "44", "Hawkins, Indiana, USA"] of Dataframe::Type
+
+    error = assert_raises do
+      dataframe.add_row(new_row)
+    end
+
+    assert_equal "Invalid type for column \"Age\". Expected (Int32 | Nil), but got String", error.message
+  end
+
   def test_adds_rows
     columns = {"Name" => String, "Age" => Int32, "Address" => String}
     first_row = Dataframe::Row.new(["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type, columns.keys)
@@ -140,7 +153,15 @@ class DataframeTest < Minitest::Test
       dataframe << row
     end
 
-    assert_equal "Row has values not in Dataframe", error.message
+    assert_equal "Column \"Location\" does not exist in Dataframe", error.message
+
+    row = Dataframe::Row{"Name" => "Jim", "Age" => "41", "Address" => "Hawkins, Indiana, USA"}
+
+    error = assert_raises do
+      dataframe.add_row(row)
+    end
+
+    assert_equal "Invalid type for column \"Age\". Expected (Int32 | Nil), but got String", error.message
   end
 
   def test_iterates

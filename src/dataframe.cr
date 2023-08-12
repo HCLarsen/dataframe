@@ -52,12 +52,12 @@ class Dataframe
     @data.size
   end
 
-  # Append. Alias for `push`.
+  # Append. Alias for `add_row`.
   def <<(row : Array(Type))
     add_row(row)
   end
 
-  # Append. Alias for `push`.
+  # Append. Alias for `add_row`.
   def <<(row : Row)
     add_row(row)
   end
@@ -68,6 +68,14 @@ class Dataframe
       raise InvalidRowError.new("Row has different size than Dataframe")
     end
 
+    types = @column_defs.values
+
+    row.each_with_index do |element, index|
+      if element.class != types[index]
+        raise InvalidRowError.new("Invalid type for column \"#{headers[index]}\". Expected (#{types[index]} | Nil), but got #{element.class}")
+      end
+    end
+
     @data.push(row)
   end
 
@@ -75,13 +83,18 @@ class Dataframe
   def add_row(row : Row)
     row.headers.each do |header|
       if !headers.includes?(header)
-        raise InvalidRowError.new("Row has values not in Dataframe")
+        raise InvalidRowError.new("Column \"#{header}\" does not exist in Dataframe")
       end
     end
 
     new_row = Row.new
-    headers.each do |header|
-      new_row[header] = row[header]?
+    @column_defs.each do |key, value|
+      row_value_for_header = row[key]?
+      if row_value_for_header.nil? || value == row_value_for_header.class
+        new_row[key] = row_value_for_header
+      else
+        raise InvalidRowError.new("Invalid type for column \"#{key}\". Expected (#{value} | Nil), but got #{row_value_for_header.class}")
+      end
     end
 
     @data.push(new_row.to_a)
