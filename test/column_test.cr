@@ -110,8 +110,7 @@ class ColumnTest < Minitest::Test
   end
 
   def test_maps_column
-    array = [44, 44, 47, 40] of Dataframe::Type
-    column = Dataframe::Column(Int32).new(array)
+    column = Dataframe::Column(Int32).new([44, nil, 47, 40])
 
     new_column = column.map do |e|
       if e.nil?
@@ -120,5 +119,23 @@ class ColumnTest < Minitest::Test
         e + 1
       end
     end
+
+    assert_equal Dataframe::Column(Int32).new([45, nil, 48, 41]), new_column
+    assert_equal Dataframe::Column(Int32).new([44, nil, 47, 40]), column
+  end
+
+  def test_maps_column_in_place
+    array = [44, nil, 47, 40] of Dataframe::Type
+    column = Dataframe::Column(Int32).new(array)
+
+    column.map! do |e|
+      if e.nil?
+        e
+      else
+        e + 1
+      end
+    end
+
+    assert_equal Dataframe::Column(Int32).new([45, nil, 48, 41]), column
   end
 end

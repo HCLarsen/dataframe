@@ -27,31 +27,51 @@ class Dataframe
       end
     end
 
+    # Equality. Returns `true` if each element in `self` is equal to each
+    # corresponding element in *other*, and that the type of *other* is identical
+    # to *T*.
     def ==(other : Column) : Bool
       @data == other.to_a && typeof(::Enumerable.element_type(@data)) == typeof(::Enumerable.element_type(other.to_a))
     end
 
+    # Returns the element at the given *index*.
     def [](index : Int32)
       @data[index]
     end
 
-    def map(& : T? -> T?) : Column(T?)
+    # Returns a `Column` with the results of running the block against each element
+    # of the collection.
+    def map(& : T? -> T?) : Column(T)
       new_data = @data.map { |e| yield e }
-      Column(T?).new(new_data)
+      Column(T).new(new_data)
     end
 
+    # Invokes the given block for each element of `self`, replacing the element with
+    # the value returned by the block.
+    def map!(& : T? -> T?) : self
+      @data.map! { |e| yield e }
+      self
+    end
+
+    # Returns the sum of all non-nil elements of `self`.
+    #
+    # Raises `NonNumericTypeError` if *T* is not numeric.
     def sum : T
       perform_numeric_operation do
         @data.compact.sum
       end
     end
 
+    # Returns the average of all non-nil elements of `self`.
+    #
+    # Raises `NonNumericTypeError` if *T* is not numeric.
     def avg : Float64
       perform_numeric_operation do
         sum / @data.compact.size
       end
     end
 
+    # Returns the most non-nil element of highest frequency in `self`.
     def mode : Array(T)
       compact = @data.compact
       if compact.uniq.size == compact.size
@@ -64,10 +84,14 @@ class Dataframe
       frequency.select { |k, v| v == max }.map { |k, v| k }
     end
 
+    # Returns an `Array` containing the elements of `self`.
     def to_a : Array(T?)
       @data
     end
 
+    # Prints a nicely readable and concise string representation of this Column to *io*.
+    #
+    # Each element is presented using its `#inspect(io)` result to avoid ambiguity.
     def to_s(io : IO) : Nil
       io << "Dataframe::Column{"
       @data.join io, ", ", &.inspect(io)
