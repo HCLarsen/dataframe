@@ -60,9 +60,13 @@ dataframe.column("Name")  #=> Dataframe::Column{"jim", "yuri", "murray"}
 
 ### To Do
 
-1. Delegate select and select! for rows.
-2. Delete sort and sort! for rows.
-3. Add detection of "mergeable" rows.
+- Delegate select and select! for rows.
+- Delete sort and sort! for rows.
+- Add detection of "mergeable" rows.
+- Add correlation between two columns.
+- Get a sample of rows based on percentage.
+- Create a CSV parser/generator.
+- Create a JSON parser/generator.
 
 ## Contributing
 
