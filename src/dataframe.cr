@@ -71,7 +71,7 @@ class Dataframe
     types = @column_defs.values
 
     row.each_with_index do |element, index|
-      if element.class != types[index]
+      if !element.nil? && element.class != types[index]
         raise InvalidRowError.new("Invalid type for column \"#{headers[index]}\". Expected (#{types[index]} | Nil), but got #{element.class}")
       end
     end
@@ -83,7 +83,7 @@ class Dataframe
   def add_row(row : Row)
     row.headers.each do |header|
       if !headers.includes?(header)
-        raise InvalidRowError.new("Column \"#{header}\" does not exist in Dataframe")
+        raise KeyError.new("Missing header: #{header}")
       end
     end
 
@@ -134,6 +134,33 @@ class Dataframe
     output
   end
 
+  def [](header : String) : Dataframe::Column
+    data_columns = @data.transpose
+    index = headers.index(header)
+    column_type = @column_defs[header]
+
+    if index
+      create_column(column_type, data_columns[index])
+    else
+      raise KeyError.new("Missing header: \"#{header}\"")
+    end
+  end
+
+  def []=(header : String, new_column : Column) : self
+    if headers.includes?(header)
+      column_index = headers.index!(header)
+
+      @data.map_with_index! do |data_row, index|
+        data_row[column_index] = new_column[index]
+
+        data_row
+      end
+    else
+      add_column(header, new_column.to_a)
+    end
+    self
+  end
+
   # Adds a new empty column to `self`.
   def add_column(header : String, type : ColumnType = String)
     @column_defs[header] = type
@@ -157,6 +184,64 @@ class Dataframe
       data_row.push(data[index])
     end
   end
+
+  # def modify_column(header : String, &) : self
+  #   columns_data = @data.transpose
+  #   index = headers.index(header)
+  #   # type = @column_defs[header]
+
+  #   if index.nil?
+  #     raise KeyError.new("Missing header: \"#{header}\"")
+  #   end
+
+  #   # column_data = columns_data[index]
+  #   # # puts column_data.class
+
+  #   # column = columns[header]
+  #   # puts column.class
+
+  #   # if column_data.is_a?(Array(String))
+  #   #   column_data.map! { |cell| yield cell.as(String) }
+  #   # elsif column_data.is_a?(Array(Int32))
+  #   #   column_data.map! { |cell| yield cell.as(Int32) }
+  #   # elsif column_data.is_a?(Array(Float64))
+  #   #   column_data.map! { |cell| yield cell.as(Float64) }
+  #   # elsif column_data.is_a?(Array(Bool))
+  #   #   column_data.map! { |cell| yield cell.as(Bool) }
+  #   # end
+
+  #   # columns_data[index] = column_data
+  #   # @data = columns_data.transpose
+
+  #   column = columns[header]
+  #   # puts column.class
+
+  #   if column.is_a?(Dataframe::Column(String))
+  #     puts "String: #{typeof(column)}"
+  #     # new_column = column.to_a.map { |cell| yield cell.as(String) }
+  #   elsif column.is_a?(Dataframe::Column(Int32))
+  #     puts "Int32: #{typeof(column)}"
+  #     # new_column = column.to_a.map { |cell| yield cell.as(Int32) }
+  #   elsif column.is_a?(Dataframe::Column(Float64))
+  #     puts "Float64: #{typeof(column)}"
+  #     # new_column = column.to_a.map { |cell| yield cell.as(Float64) }
+  #     # column_data.map! { |cell| yield cell.as(Float64) }
+  #   elsif column.is_a?(Dataframe::Column(Bool))
+  #     puts "Bool: #{typeof(column)}"
+  #     # new_column = column.to_a.map { |cell| yield cell.as(Bool) }
+  #     # column_data.map! { |cell| yield cell.as(Bool) }
+  #   else
+  #     raise InvalidTypeError.new(column.class)
+  #   end
+
+  #   # puts new_column.class
+  #   # puts (Array(Type).new + new_column).class
+
+  #   # columns_data[index] = (Array(Type).new + new_column)
+  #   # @data = columns_data.transpose
+
+  #   self
+  # end
 
   # Changes the header of the specified column to a new value.
   #
@@ -215,7 +300,6 @@ class Dataframe
   # See also: `Dataframe#select`.
   def order_columns(new_headers : Array(String)) : Dataframe
     old_columns = columns
-    column_data = @data.transpose
     new_column_data = Hash(String, Column(String) | Column(Int32) | Column(Float64) | Column(Bool)).new
 
     new_headers.each do |header|
@@ -225,6 +309,28 @@ class Dataframe
     new_data = new_column_data.values.map(&.to_a).transpose
 
     Dataframe.new(new_headers, new_data)
+  end
+
+  # Modifies `self` by rearranging columns in order specified by *new_headers*.
+  #
+  # **NOTE**: Any column with names omitted from *new_headers* will be removed from
+  # `self`.
+  #
+  # See also: `Dataframe#select!`.
+  def order_columns!(new_headers : Array(String)) : self
+    old_columns = columns
+    new_column_defs = Hash(String, ColumnType).new
+    new_column_data = Hash(String, Column(String) | Column(Int32) | Column(Float64) | Column(Bool)).new
+
+    new_headers.each do |header|
+      new_column_defs[header] = @column_defs[header]
+      new_column_data[header] = columns[header]
+    end
+
+    @column_defs = new_column_defs
+    @data = new_column_data.values.map(&.to_a).transpose
+
+    self
   end
 
   # Returns the data of the `Dataframe` as an array of `Row`.

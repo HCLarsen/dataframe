@@ -7,7 +7,7 @@ class DataframeTest < Minitest::Test
   @data = [
     ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
     ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
-    ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
+    ["Murray", nil, "Sesser, Illinois, USA"] of Dataframe::Type,
   ]
 
   def test_initializes_empty_dataframe
@@ -41,7 +41,7 @@ class DataframeTest < Minitest::Test
     data = [
       ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
       ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
-      ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
+      ["Murray", nil, "Sesser, Illinois, USA"] of Dataframe::Type,
     ]
 
     dataframe = Dataframe.new(headers, data)
@@ -55,7 +55,7 @@ class DataframeTest < Minitest::Test
     data = [
       ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
       ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
-      ["Murray", 40] of Dataframe::Type,
+      ["Murray", nil] of Dataframe::Type,
     ]
 
     error = assert_raises do
@@ -127,7 +127,7 @@ class DataframeTest < Minitest::Test
     headers = ["Name", "Age", "Address"]
     data = [
       ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
-      ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
+      ["Murray", nil, "Sesser, Illinois, USA"] of Dataframe::Type,
     ]
 
     dataframe = Dataframe.new(headers, data)
@@ -142,7 +142,7 @@ class DataframeTest < Minitest::Test
     headers = ["Name", "Age", "Address"]
     data = [
       ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
-      ["Murray", 40, "Sesser, Illinois, USA"] of Dataframe::Type,
+      ["Murray", nil, "Sesser, Illinois, USA"] of Dataframe::Type,
     ]
 
     dataframe = Dataframe.new(headers, data)
@@ -153,7 +153,7 @@ class DataframeTest < Minitest::Test
       dataframe << row
     end
 
-    assert_equal "Column \"Location\" does not exist in Dataframe", error.message
+    assert_equal "Missing header: Location", error.message
 
     row = Dataframe::Row{"Name" => "Jim", "Age" => "41", "Address" => "Hawkins, Indiana, USA"}
 
@@ -214,6 +214,13 @@ class DataframeTest < Minitest::Test
     assert_equal ["Jim", "Yuri", "Murray"], columns["Name"].to_a
   end
 
+  def test_gets_single_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    assert_equal ["Jim", "Yuri", "Murray"], dataframe["Name"].to_a
+    assert_equal [41, 47, nil], dataframe["Age"].to_a
+  end
+
   def test_adds_empty_column
     dataframe = Dataframe.new(@headers, @data)
 
@@ -232,6 +239,27 @@ class DataframeTest < Minitest::Test
 
     assert_equal ["Name", "Age", "Address", "Married?"], dataframe.headers
     assert_equal ["Jim", 41, "Hawkins, Indiana, USA", false], dataframe.data[0]
+  end
+
+  def test_creates_new_column_with_hash_syntax
+    dataframe = Dataframe.new(@headers, @data)
+    married_column = Dataframe::Column(Bool).new([false, false, false])
+
+    dataframe["Married?"] = married_column
+
+    assert_equal ["Name", "Age", "Address", "Married?"], dataframe.headers
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA", false], dataframe.data[0]
+  end
+
+  def test_reassigns_column_with_hash_syntax
+    dataframe = Dataframe.new(@headers, @data)
+
+    age_column = dataframe["Age"].as(Dataframe::Column(Int32))
+    age_column.map! { |e| e.nil? ? nil : e + 1 }
+    dataframe["Age"] = age_column
+
+    assert_equal ["Name", "Age", "Address"], dataframe.headers
+    assert_equal [42, 48, nil], dataframe["Age"].to_a
   end
 
   # This feature will generate a new column by iterating over existing row objects, and generating the value for the new column based on the return value of the block.
@@ -309,18 +337,30 @@ class DataframeTest < Minitest::Test
     assert_equal @headers, dataframe.headers
   end
 
+  def test_rearranges_columns_in_place
+    new_headers = ["Name", "Address", "Age"]
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.order_columns!(["Name", "Address", "Age"])
+
+    assert_equal new_headers, dataframe.headers
+    assert_equal ["Jim", "Hawkins, Indiana, USA", 41], dataframe.data.first?
+  end
+
   # def test_modify_column
   #   dataframe = Dataframe.new(@headers, @data)
 
-  #   dataframe.modify_column("Address") do |e|
-  #     e.upcase
-  #   end
+  #   # dataframe.modify_column("Name") do |e|
+  #   #   e.downcase
+  #   # end
 
-  #   dataframe.modify_column("Name") do |e|
-  #     e.downcase
-  #   end
+  #   column = dataframe.columns["Name"].as(Dataframe::Column(String))
 
-  #   assert_equal ["jim", "41", "HAWKINS, INDIANA, USA"], dataframe.data[0]
+  #   downcased = column.map { |e| e.nil? ? e : e.downcase }
+
+  #   # dataframe["Name"] = downcased
+
+  #   assert_equal ["jim", 41, "Hawkins, Indiana, USA"], dataframe.data[0]
   # end
 
   # def test_parses_from_csv
