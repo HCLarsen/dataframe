@@ -14,12 +14,14 @@ class Dataframe
   end
 
   # Creates a new `Dataframe` instance with the specified headers, and columns
-  # of type `String`.
+  # of type `String`, but with no data.
   def initialize(column_names : Array(String))
     types = Array(ColumnType).new(column_names.size, String)
     @column_defs = Hash.zip(column_names, types)
   end
 
+  # Creates a new `Dataframe` instance with column names and types defined by *columns*, but
+  # with no data.
   def initialize(columns)
     @column_defs.merge!(columns)
   end
@@ -29,20 +31,25 @@ class Dataframe
   # Raises an InvalidDataframe error if the headers and each row don't all have
   # the same length.
   def initialize(headers : Array(String), rows : Array(Array(Type)))
-    first_row = rows[0]
+    width = headers.size
+    if rows.any? { |e| e.size != width }
+      raise InvalidDataframeError.new
+    end
+
+    columns_data = rows.transpose
+
     headers.each_with_index do |header, index|
-      cell = first_row[index]
-      if !cell.nil?
-        @column_defs[header] = cell.class
+      column = columns_data[index].compact
+      if column.size > 0
+        @column_defs[header] = column.first.class
+      else
+        raise InvalidDataframeError.new("Can't determine type of column \"#{header}\".")
       end
     end
 
-    width = headers.size
     rows.each do |row|
       if row.size == width
         add_row(row)
-      else
-        raise InvalidDataframeError.new
       end
     end
   end
@@ -173,6 +180,8 @@ class Dataframe
   # Adds a new column to `self`, with content specified by *data*.
   #
   # The type is determined by the content of *data*.
+  #
+  # **NOTE**: If *data* doesn't have any non-null values, a runtime error will occur.
   def add_column(header : String, data : Array(Type))
     if data.size != @data.size
       raise InvalidDataframeError.new("New column must be same size as other columns: #{@data.size}")

@@ -50,12 +50,27 @@ class DataframeTest < Minitest::Test
     assert_equal data, dataframe.data
   end
 
-  def test_raises_for_uneven_rows
+  def test_initializes_from_array_of_arrays_with_nils
     headers = ["Name", "Age", "Address"]
+    data = [
+      [nil, nil, nil] of Dataframe::Type,
+      ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
+      ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
+      ["Murray", nil, "Sesser, Illinois, USA"] of Dataframe::Type,
+    ]
+
+    dataframe = Dataframe.new(headers, data)
+
+    assert_equal headers, dataframe.headers
+    assert_equal data, dataframe.data
+  end
+
+  def test_raises_for_uneven_rows
+    headers = ["Name", "Age", "Address", "Married?"]
     data = [
       ["Jim", 41, "Hawkins, Indiana, USA"] of Dataframe::Type,
       ["Yuri", 47, "Siberia, USSR"] of Dataframe::Type,
-      ["Murray", nil] of Dataframe::Type,
+      ["Murray", nil, "Sesser, Illinois, USA"] of Dataframe::Type,
     ]
 
     error = assert_raises do
@@ -63,6 +78,22 @@ class DataframeTest < Minitest::Test
     end
 
     assert_equal Dataframe::InvalidDataframeError, error.class
+  end
+
+  def test_raises_for_nil_column
+    headers = ["Name", "Age", "Address", "Married?"]
+    data = [
+      ["Jim", 41, "Hawkins, Indiana, USA", nil] of Dataframe::Type,
+      ["Yuri", 47, "Siberia, USSR", nil] of Dataframe::Type,
+      ["Murray", nil, "Sesser, Illinois, USA", nil] of Dataframe::Type,
+    ]
+
+    error = assert_raises do
+      dataframe = Dataframe.new(headers, data)
+    end
+
+    assert_equal Dataframe::InvalidDataframeError, error.class
+    assert_equal "Can't determine type of column \"Married?\".", error.message
   end
 
   def test_adds_data_rows
@@ -206,21 +237,6 @@ class DataframeTest < Minitest::Test
   #   assert_equal ["Dustin","15","9"], dataframe.data[1]
   # end
 
-  def test_gets_columns
-    dataframe = Dataframe.new(@headers, @data)
-
-    columns = dataframe.columns
-
-    assert_equal ["Jim", "Yuri", "Murray"], columns["Name"].to_a
-  end
-
-  def test_gets_single_column
-    dataframe = Dataframe.new(@headers, @data)
-
-    assert_equal ["Jim", "Yuri", "Murray"], dataframe["Name"].to_a
-    assert_equal [41, 47, nil], dataframe["Age"].to_a
-  end
-
   def test_adds_empty_column
     dataframe = Dataframe.new(@headers, @data)
 
@@ -266,7 +282,7 @@ class DataframeTest < Minitest::Test
   # def test_add_column_with_block
   # end
 
-  def test_raises_for_invalid_column
+  def test_raises_when_adding_invalid_column
     dataframe = Dataframe.new(@headers, @data)
 
     error = assert_raises do
@@ -274,6 +290,21 @@ class DataframeTest < Minitest::Test
     end
 
     assert_equal "New column must be same size as other columns: 3", error.message
+  end
+
+  def test_gets_columns
+    dataframe = Dataframe.new(@headers, @data)
+
+    columns = dataframe.columns
+
+    assert_equal ["Jim", "Yuri", "Murray"], columns["Name"].to_a
+  end
+
+  def test_gets_single_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    assert_equal ["Jim", "Yuri", "Murray"], dataframe["Name"].to_a
+    assert_equal [41, 47, nil], dataframe["Age"].to_a
   end
 
   def test_renames_column
