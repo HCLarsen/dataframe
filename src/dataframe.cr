@@ -115,9 +115,9 @@ class Dataframe
   end
 
   # Iterates over the rows of `self`, returning each row as an instance of `Row`.
-  def each_row(& : Hash(String, Type) ->) : Nil
+  def each_row(& : Row ->) : Nil
     @data.each do |row|
-      yield Hash.zip(headers, row)
+      yield Row.new(row, headers)
     end
   end
 
@@ -349,7 +349,82 @@ class Dataframe
     end
   end
 
-  # Returns a `Tuple` of the dataframe's dimensions in the form of { rows, columns }
+  # Returns a `Dataframe` with all the elements in the collection for which
+  # the passed block is falsey.
+  def reject(& : Row ->) : Dataframe
+    new_rows = Array(Array(Type)).new
+    each_row { |e| new_rows << e.to_a unless yield e }
+
+    Dataframe.new(headers, new_rows)
+  end
+
+  # Modifies `self`, deleting the rows in the collection for which the
+  # passed block is truthy. Returns `self`.
+  #
+  # See also: `Dataframe#reject`.
+  def reject!(& : Row ->) : self
+    new_rows = rows
+
+    new_rows.reject! { |e| yield e }
+    @data = new_rows.map { |e| e.to_a }
+
+    self
+  end
+
+  # Returns a new `Dataframe` with only rows for which the passed block is truthy.
+  def select(& : Row ->) : Dataframe
+    new_rows = Array(Array(Type)).new
+    each_row { |e| new_rows << e.to_a if yield e }
+
+    Dataframe.new(headers, new_rows)
+  end
+
+  # Returns a new `Dataframe` with only rows for which the passed block is truthy.
+  def select!(& : Row ->) : self
+    new_rows = rows
+
+    new_rows.select! { |e| yield e }
+    @data = new_rows.map { |e| e.to_a }
+
+    self
+  end
+
+  def sort_by(& : Row ->) : Dataframe
+    new_rows = rows.sort_by { |row| yield row }.map { |e| e.to_a }
+
+    Dataframe.new(headers, new_rows)
+  end
+
+  def sort_by!(& : Row ->) : self
+    new_rows = rows.sort_by { |row| yield row }
+    @data = new_rows.map { |e| e.to_a }
+
+    self
+  end
+
+  def sort_by(column : String) : Dataframe
+    new_rows = rows.sort do |row1, row2|
+      cell1 = row1[column]
+      cell2 = row2[column]
+
+      if cell1.nil? || cell2.nil?
+        1
+      elsif cell1.is_a?(Int32)
+        cell1 <=> cell2.as(Int32)
+      elsif cell1.is_a?(Float64)
+        cell1 <=> cell2.as(Float64)
+      else
+        cell1.as(String) <=> cell2.as(String)
+      end
+    end
+
+    # { |row| row[column] }
+
+    Dataframe.new(headers, new_rows.map { |e| e.to_a })
+  end
+
+  # Returns a `Tuple` of the dataframe's dimensions in the form of
+  # { rows, columns }
   def shape : Tuple(Int32, Int32)
     {@data.size, @column_defs.keys.size}
   end
@@ -586,10 +661,12 @@ class Dataframe
   #   other.left_outer_join(self, on: on)
   # end
 
-  # def select_rows(& : Array(String) ->) : Dataframe
-  #   new_rows = @data.select { |e| yield e }
+  # def select_rows(& : Row ->) : Dataframe
+  #   # new_rows = @data.select { |e| yield e }
+  #   new_rows = Array(Array(Type)).new
+  #   each_row { |e| new_rows << e if yield e }
 
-  #   Dataframe.new(@headers, new_rows)
+  #   Dataframe.new(@column_defs, new_rows)
   # end
 
   # def select_rows!(& : Array(String) ->) : Nil

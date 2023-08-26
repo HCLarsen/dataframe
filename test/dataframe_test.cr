@@ -208,34 +208,95 @@ class DataframeTest < Minitest::Test
   end
 
   def test_iterates_over_rows
+    rows = Array(Dataframe::Row).new
     dataframe = Dataframe.new(@headers, @data)
 
     kids_names = ""
 
     dataframe.each_row do |row|
+      rows << row
       kids_names += "#{row["Name"]} "
     end
 
+    assert_equal Dataframe::Row, rows.first.class
     assert_equal "Jim Yuri Murray ", kids_names
   end
 
-  # def test_filters_with_select
-  #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
+  def test_rejects_rows
+    dataframe = Dataframe.new(@headers, @data)
 
-  #   hawkins = dataframe.select_data { |e| e[2] == "9" }
+    americans = dataframe.reject { |e| !e["Address"].as(String).includes?("USA") }
 
-  #   assert_equal ["Mike","15","9"], hawkins.data[0]
-  #   assert_equal ["Dustin","15","9"], hawkins.data[1]
-  # end
+    assert_equal 2, americans.row_count
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], americans.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], americans.data[1]
+  end
 
-  # def test_filters_in_place_with_select
-  #   dataframe = Dataframe.from_csv_file("./test/files/school.csv")
+  def test_rejects_rows_in_place
+    dataframe = Dataframe.new(@headers, @data)
 
-  #   dataframe.select_data! { |e| e[2] == "9" }
+    dataframe.reject! { |e| !e["Address"].as(String).includes?("USA") }
 
-  #   assert_equal ["Mike","15","9"], dataframe.data[0]
-  #   assert_equal ["Dustin","15","9"], dataframe.data[1]
-  # end
+    assert_equal 2, dataframe.row_count
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], dataframe.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], dataframe.data[1]
+  end
+
+  def test_filters_with_select
+    dataframe = Dataframe.new(@headers, @data)
+
+    americans = dataframe.select { |e| e["Address"].as(String).includes?("USA") }
+
+    assert_equal 2, americans.row_count
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], americans.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], americans.data[1]
+  end
+
+  def test_filters_in_place_with_select
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.select! { |e| e["Address"].as(String).includes?("USA") }
+
+    assert_equal 2, dataframe.row_count
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], dataframe.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], dataframe.data[1]
+  end
+
+  def test_sorts_rows
+    dataframe = Dataframe.new(@headers, @data)
+
+    sorted = dataframe.sort_by { |row| row["Name"].as(String) }
+
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], sorted.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], sorted.data[1]
+    assert_equal ["Yuri", 47, "Siberia, USSR"], sorted.data[2]
+  end
+
+  def test_sorts_rows_in_place
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.sort_by! { |row| row["Name"].as(String) }
+
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], dataframe.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], dataframe.data[1]
+    assert_equal ["Yuri", 47, "Siberia, USSR"], dataframe.data[2]
+  end
+
+  def test_sorts_by_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.sort_by("Age")
+
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], dataframe.data[0]
+    assert_equal ["Yuri", 47, "Siberia, USSR"], dataframe.data[1]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], dataframe.data[2]
+  end
+
+  def test_sorts_descending_by_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.sort_by("Age")
+  end
 
   def test_adds_empty_column
     dataframe = Dataframe.new(@headers, @data)
