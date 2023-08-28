@@ -285,17 +285,41 @@ class DataframeTest < Minitest::Test
   def test_sorts_by_column
     dataframe = Dataframe.new(@headers, @data)
 
-    dataframe.sort_by("Age")
+    sorted = dataframe.sort_by("Name")
 
-    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], dataframe.data[0]
-    assert_equal ["Yuri", 47, "Siberia, USSR"], dataframe.data[1]
-    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], dataframe.data[2]
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], sorted.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], sorted.data[1]
+    assert_equal ["Yuri", 47, "Siberia, USSR"], sorted.data[2]
   end
 
   def test_sorts_descending_by_column
     dataframe = Dataframe.new(@headers, @data)
 
-    dataframe.sort_by("Age")
+    sorted = dataframe.sort_by("Age", desc = true)
+
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], sorted.data[0]
+    assert_equal ["Yuri", 47, "Siberia, USSR"], sorted.data[1]
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], sorted.data[2]
+  end
+
+  def test_sorts_in_place_by_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.sort_by!("Name")
+
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], dataframe.data[0]
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], dataframe.data[1]
+    assert_equal ["Yuri", 47, "Siberia, USSR"], dataframe.data[2]
+  end
+
+  def test_sorts_descending_in_place_by_column
+    dataframe = Dataframe.new(@headers, @data)
+
+    dataframe.sort_by!("Age", desc = true)
+
+    assert_equal ["Murray", nil, "Sesser, Illinois, USA"], dataframe.data[0]
+    assert_equal ["Yuri", 47, "Siberia, USSR"], dataframe.data[1]
+    assert_equal ["Jim", 41, "Hawkins, Indiana, USA"], dataframe.data[2]
   end
 
   def test_adds_empty_column

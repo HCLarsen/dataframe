@@ -402,7 +402,7 @@ class Dataframe
     self
   end
 
-  def sort_by(column : String) : Dataframe
+  def sort_by(column : String, desc = false) : Dataframe
     new_rows = rows.sort do |row1, row2|
       cell1 = row1[column]
       cell2 = row2[column]
@@ -418,9 +418,36 @@ class Dataframe
       end
     end
 
-    # { |row| row[column] }
+    if desc
+      new_rows.reverse!
+    end
 
     Dataframe.new(headers, new_rows.map { |e| e.to_a })
+  end
+
+  def sort_by!(column : String, desc = false) : self
+    column_index = headers.index!(column)
+
+    @data.sort! do |row1, row2|
+      cell1 = row1[column_index]
+      cell2 = row2[column_index]
+
+      if cell1.nil? || cell2.nil?
+        1
+      elsif cell1.is_a?(Int32)
+        cell1 <=> cell2.as(Int32)
+      elsif cell1.is_a?(Float64)
+        cell1 <=> cell2.as(Float64)
+      else
+        cell1.as(String) <=> cell2.as(String)
+      end
+    end
+
+    if desc
+      @data.reverse!
+    end
+
+    self
   end
 
   # Returns a `Tuple` of the dataframe's dimensions in the form of
