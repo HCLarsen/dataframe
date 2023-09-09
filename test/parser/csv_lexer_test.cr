@@ -39,6 +39,17 @@ class CSVParserTest < Minitest::Test
     assert_equal expected_value, token.float_value
   end
 
+  private def assert_string_cell(lexer : Dataframe::CSVLexer, expected_value : String)
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::String, token.kind
+    assert_equal expected_value, token.string_value
+  end
+
+  private def assert_nil_cell(lexer : Dataframe::CSVLexer)
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::Null, token.kind
+  end
+
   def test_lexes_value_types
     assert_lexes_string "hello", "hello"
     assert_lexes_string "true", "true"
@@ -94,24 +105,201 @@ class CSVParserTest < Minitest::Test
     assert_lexes_float "10.100000000000000000000", 10.1
   end
 
-  # def test_lexes_two_columns
-  #   lexer = Dataframe::CSVLexer.new("one,2,3.0,false,")
+  def test_lexes_three_columns
+    lexer = Dataframe::CSVLexer.new("one,2,3.0")
 
-  #   token = lexer.next_token
-  #   assert_equal Dataframe::CSVLexer::Token::Kind::String, token.kind
-  #   assert_equal "one", token.string_value
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::String, token.kind
+    assert_equal "one", token.string_value
 
-  #   token = lexer.next_token
-  #   assert_equal Dataframe::CSVLexer::Token::Kind::Int, token.kind
-  #   assert_equal 2, token.int_value
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::Int, token.kind
+    assert_equal 2, token.int_value
 
-  #   token = lexer.next_token
-  #   assert_equal Dataframe::CSVLexer::Token::Kind::Float, token.kind
-  #   assert_equal 3.0, token.float_value
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::Float, token.kind
+    assert_equal 3.0, token.float_value
 
-  #   token = lexer.next_token
-  #   assert_equal Dataframe::CSVLexer::Token::Kind::False, token.kind
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
 
-  #   assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
-  # end
+  def test_lexes_three_columns_with_whitespace
+    lexer = Dataframe::CSVLexer.new("one, 2, 3.0")
+
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::String, token.kind
+    assert_equal "one", token.string_value
+
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::Int, token.kind
+    assert_equal 2, token.int_value
+
+    token = lexer.next_token
+    assert_equal Dataframe::CSVLexer::Token::Kind::Float, token.kind
+    assert_equal 3.0, token.float_value
+
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_two_columns_with_two_rows
+    lexer = Dataframe::CSVLexer.new("hello,world\nfoo,bar")
+
+    assert_string_cell lexer, "hello"
+    assert_string_cell lexer, "world"
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+
+    assert_string_cell lexer, "foo"
+    assert_string_cell lexer, "bar"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_carriage_return_and_newline
+    lexer = Dataframe::CSVLexer.new("hello,world\r\nfoo,bar")
+
+    assert_string_cell lexer, "hello"
+    assert_string_cell lexer, "world"
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+
+    assert_string_cell lexer, "foo"
+    assert_string_cell lexer, "bar"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_two_empty_columns
+    lexer = Dataframe::CSVLexer.new(",")
+    assert_nil_cell lexer
+    assert_nil_cell lexer
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_last_empty_column
+    lexer = Dataframe::CSVLexer.new("foo,")
+    assert_string_cell lexer, "foo"
+    assert_nil_cell lexer
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_with_empty_columns
+    lexer = Dataframe::CSVLexer.new("foo,,bar")
+    assert_string_cell lexer, "foo"
+    assert_nil_cell lexer
+    assert_string_cell lexer, "bar"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_with_empty_column_before_newline
+    lexer = Dataframe::CSVLexer.new("foo,\nbar")
+    assert_string_cell lexer, "foo"
+    assert_nil_cell lexer
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+    assert_string_cell lexer, "bar"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_with_whitespace
+    lexer = Dataframe::CSVLexer.new(%("  foo  ","  bar  "))
+    assert_string_cell lexer, "  foo  "
+    assert_string_cell lexer, "  bar  "
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_two_with_quotes
+    lexer = Dataframe::CSVLexer.new(%("hello","world"))
+    assert_string_cell lexer, "hello"
+    assert_string_cell lexer, "world"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_two_with_inner_quotes
+    lexer = Dataframe::CSVLexer.new(%("hel""lo","wor""ld"))
+    assert_string_cell lexer, %(hel"lo)
+    assert_string_cell lexer, %(wor"ld)
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_with_comma_inside_quote
+    lexer = Dataframe::CSVLexer.new(%("foo,bar"))
+    assert_string_cell lexer, "foo,bar"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_with_newline_inside_quote
+    lexer = Dataframe::CSVLexer.new(%("foo\nbar"))
+    assert_string_cell lexer, "foo\nbar"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_newline_followed_by_eof
+    lexer = Dataframe::CSVLexer.new("hello,world\n")
+    assert_string_cell lexer, "hello"
+    assert_string_cell lexer, "world"
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_with_a_given_separator
+    lexer = Dataframe::CSVLexer.new("hello;world\n", separator: ';')
+    assert_string_cell lexer, "hello"
+    assert_string_cell lexer, "world"
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_lexes_with_a_given_quote_char
+    lexer = Dataframe::CSVLexer.new("'hello,world'\n", quote_char: '\'')
+    assert_string_cell lexer, "hello,world"
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_raises_if_single_quote_in_the_middle
+    error = assert_raises do
+      lexer = Dataframe::CSVLexer.new(%(hel"lo))
+      lexer.next_token
+    end
+
+    assert_equal CSV::MalformedCSVError, error.class
+    assert_equal "Unexpected quote at line 1, column 4", error.message
+  end
+
+  def test_raises_if_command_newline_or_end_not_after_quote
+    error = assert_raises do
+      lexer = Dataframe::CSVLexer.new(%("hel"a))
+      lexer.next_token
+    end
+
+    assert_equal CSV::MalformedCSVError, error.class
+    assert_equal "Expecting comma, newline or end, not 'a' at line 1, column 6", error.message
+  end
+
+  def test_raises_on_unclose_quote
+    error = assert_raises do
+      lexer = Dataframe::CSVLexer.new(%("foo))
+      lexer.next_token
+    end
+
+    assert_equal CSV::MalformedCSVError, error.class
+    assert_equal "Unclosed quote at line 1, column 5", error.message
+  end
+
+  def test_doesnt_consume_char_after_slash_n
+    io = IO::Memory.new("a\n")
+    lexer = Dataframe::CSVLexer.new(io)
+
+    assert_string_cell lexer, "a"
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+    assert_equal 2, io.pos
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
+
+  def test_doesnt_consume_char_after_slash_r
+    io = IO::Memory.new("a\r\nx")
+    lexer = Dataframe::CSVLexer.new(io)
+
+    assert_string_cell lexer, "a"
+    assert_equal 2, io.pos
+    assert_equal Dataframe::CSVLexer::Token::Kind::Newline, lexer.next_token.kind
+    assert_string_cell lexer, "x"
+    assert_equal Dataframe::CSVLexer::Token::Kind::EOF, lexer.next_token.kind
+  end
 end

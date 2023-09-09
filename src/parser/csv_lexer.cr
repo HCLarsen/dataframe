@@ -47,100 +47,96 @@ class Dataframe::CSVLexer # < CSV::Lexer::StringBased
   # Returns the current `Token`.
   getter token : Token = Token.new
   private getter current_char
+  private getter last_char : Char?
 
   def initialize(string : String, @separator : Char = DEFAULT_SEPARATOR, @quote_char : Char = DEFAULT_QUOTE_CHAR)
     @io = IO::Memory.new(string)
     @buffer = IO::Memory.new
     @column_number = 1
     @line_number = 1
-    @last_empty_column = false
-    @number_start = 0
+    @last_char = nil
 
     @current_char = @io.read_char || '\0'
-
-    # When the lexer finds \n or \r it produces a newline token
-    # but it doesn't eagerly consume the next token. It does this
-    # so that if a CSV is streamed from STDIN or from a socket
-    # the parser will produce a row as soon as a newline is reached,
-    # without having to wait for more content.
-    @last_was_slash_r = false
-    @last_was_slash_n = false
   end
 
   def initialize(@io : IO, @separator : Char = DEFAULT_SEPARATOR, @quote_char : Char = DEFAULT_QUOTE_CHAR)
     @buffer = IO::Memory.new
     @column_number = 1
     @line_number = 1
-    @last_empty_column = false
-    @number_start = 0
+    @last_char = nil
 
     @current_char = @io.read_char || '\0'
-
-    # When the lexer finds \n or \r it produces a newline token
-    # but it doesn't eagerly consume the next token. It does this
-    # so that if a CSV is streamed from STDIN or from a socket
-    # the parser will produce a row as soon as a newline is reached,
-    # without having to wait for more content.
-    @last_was_slash_r = false
-    @last_was_slash_n = false
   end
 
   # Returns the next `Token` in this CSV.
   def next_token : CSVLexer::Token
-    if @last_empty_column
-      @last_empty_column = false
-      @token.kind = Token::Kind::EOF
-      @token.raw_value = ""
-      return @token
-    end
-
-    # if @last_was_slash_r
-    #   if next_char == '\n'
-    #     next_char
-    #   end
-    #   @last_was_slash_r = false
-    # elsif @last_was_slash_n
-    #   next_char
-    #   @last_was_slash_n = false
-    # end
-
     case current_char
     when '\0'
-      @token.kind = Token::Kind::EOF
+      if !empty_column
+        @token.kind = Token::Kind::EOF
+      end
+    when '\r', '\n'
+      if !empty_column
+        consume_newline
+      end
     when @separator
-      @token.kind = Token::Kind::String
-      @token.string_value = ""
-      check_last_empty_column
-      # when '\r'
-      #   @token.kind = Token::Kind::Newline
-      #   @last_was_slash_r = true
-      # when '\n'
-      #   @token.kind = Token::Kind::Newline
-      #   @last_was_slash_n = true
+      @token.kind = Token::Kind::Null
+      next_char
     when @quote_char
       @token.kind = Token::Kind::String
       @token.string_value = consume_quoted_cell
-      # when '-'
-      #   @token.kind = Token::Kind::String
-      #   @token.string_value = consume_unquoted_cell
-      #   # consume_number
-      # when '0'..'9'
-      #   consume_number
+      cell_end
     else
       @token.kind = Token::Kind::String
       @token.string_value = consume_unquoted_cell
+      cell_end
     end
-    @token
+
+    return @token
+  end
+
+  private def consume_quoted_cell
+    cell_start
+
+    while true
+      case char = next_char
+      when '\0'
+        raise "Unclosed quote"
+      when @quote_char
+        case next_char
+        when @separator
+          break
+        when '\r', '\n', '\0'
+          break
+        when @quote_char
+          @buffer << @quote_char
+        else
+          raise "Expecting comma, newline or end, not #{current_char.inspect}"
+        end
+      when '\\'
+        @buffer << consume_string_escape_sequence
+      else
+        @buffer << char
+      end
+    end
+    @buffer.to_s
   end
 
   private def consume_unquoted_cell
-    @buffer.clear
+    cell_start
 
     case current_char
     when '0'..'9'
       consume_number
     when '-'
       @buffer << current_char
+      case next_char
+      when '0'..'9'
+        consume_number
+      else
+        consume_string
+      end
+    when ' '
       case next_char
       when '0'..'9'
         consume_number
@@ -161,38 +157,13 @@ class Dataframe::CSVLexer # < CSV::Lexer::StringBased
         @buffer << consume_string_escape_sequence
       when @separator, '\r', '\n', '\0'
         break
-      else
-        @buffer << char
-      end
-    end
-    @buffer.to_s
-  end
-
-  private def consume_quoted_cell
-    @buffer.clear
-    while true
-      case char = next_char
-      when '\0'
-        raise "Unclosed quote"
       when @quote_char
-        case next_char
-        when @separator
-          check_last_empty_column
-          break
-        when '\r', '\n', '\0'
-          break
-        when @quote_char
-          @buffer << @quote_char
-        else
-          raise "Expecting comma, newline or end, not #{current_char.inspect}"
-        end
-      when '\\'
-        @buffer << consume_string_escape_sequence
+        raise "Unexpected quote"
       else
         @buffer << char
       end
     end
-    @buffer.to_s
+    @buffer.to_s.strip
   end
 
   private def consume_string_escape_sequence
@@ -240,8 +211,6 @@ class Dataframe::CSVLexer # < CSV::Lexer::StringBased
   end
 
   private def consume_number
-    # number_start
-
     case current_char
     when '0'
       append_number_char
@@ -275,11 +244,8 @@ class Dataframe::CSVLexer # < CSV::Lexer::StringBased
         number_end
       end
     else
-      puts @buffer.to_s
       unexpected_char
     end
-
-    # check_last_empty_column
   end
 
   private def consume_float
@@ -329,22 +295,24 @@ class Dataframe::CSVLexer # < CSV::Lexer::StringBased
     number_end
   end
 
-  private def check_last_empty_column
-    case next_char
-    when '\r', '\n', '\0'
-      @last_empty_column = true
-    else
-      # not empty
+  private def consume_newline
+    @token.kind = Token::Kind::Newline
+    @column_number = 0
+    @line_number += 1
+
+    last_char = current_char
+    char = next_char_no_column_increment
+    if last_char == '\r'
+      if char == '\n'
+        next_char_no_column_increment
+      end
     end
   end
 
   private def next_char
+    @last_char = current_char
     @column_number += 1
     char = next_char_no_column_increment
-    if char.in?('\n', '\r')
-      @column_number = 0
-      @line_number += 1
-    end
     char
   end
 
@@ -352,7 +320,18 @@ class Dataframe::CSVLexer # < CSV::Lexer::StringBased
     @current_char = @io.read_char || '\0'
   end
 
-  private def number_start
+  private def empty_column
+    if @last_char == @separator
+      @token.kind = Token::Kind::Null
+      @last_char = nil
+
+      return true
+    else
+      return false
+    end
+  end
+
+  private def cell_start
     @buffer.clear
   end
 
@@ -368,7 +347,17 @@ class Dataframe::CSVLexer # < CSV::Lexer::StringBased
     @token.raw_value = number_string
   end
 
+  private def cell_end
+    if current_char == @separator
+      next_char
+    end
+  end
+
   private def unexpected_char(char = current_char)
     raise "Unexpected char '#{char}'"
+  end
+
+  private def raise(msg)
+    ::raise CSV::MalformedCSVError.new(msg, @line_number, @column_number)
   end
 end
