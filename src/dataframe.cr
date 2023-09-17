@@ -2,6 +2,7 @@ require "csv"
 
 require "./column"
 require "./row"
+require "./parser/*"
 
 class Dataframe
   VERSION = "0.1.0"
@@ -52,6 +53,10 @@ class Dataframe
         add_row(row)
       end
     end
+  end
+
+  def self.from_csv(string_or_io : String | IO, headers : Bool = true, separator : Char = CSVLexer::DEFAULT_SEPARATOR, quote_char : Char = CSVLexer::DEFAULT_QUOTE_CHAR) : Dataframe
+    CSVParser.new(string_or_io, headers, separator, quote_char).parse
   end
 
   # Returns the number of rows in the `Dataframe`.

@@ -20,6 +20,10 @@ class Dataframe
 
       super(message)
     end
+
+    def initialize(message : String)
+      super(message)
+    end
   end
 
   class InvalidRowError < Exception

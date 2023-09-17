@@ -105,6 +105,28 @@ class CSVParserTest < Minitest::Test
     assert_lexes_float "10.100000000000000000000", 10.1
   end
 
+  def test_returns_if_token_is_cell
+    lexer = Dataframe::CSVLexer.new "hello"
+    token = lexer.next_token
+    assert token.is_cell?
+
+    lexer = Dataframe::CSVLexer.new "0"
+    token = lexer.next_token
+    assert token.is_cell?
+
+    lexer = Dataframe::CSVLexer.new "-1.23e4"
+    token = lexer.next_token
+    assert token.is_cell?
+
+    lexer = Dataframe::CSVLexer.new "\n"
+    token = lexer.next_token
+    refute token.is_cell?
+
+    lexer = Dataframe::CSVLexer.new "\0"
+    token = lexer.next_token
+    refute token.is_cell?
+  end
+
   def test_lexes_three_columns
     lexer = Dataframe::CSVLexer.new("one,2,3.0")
 
